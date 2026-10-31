@@ -1,4 +1,5 @@
 import type {
+  CaseListQuery,
   CaseDetail,
   CaseSummary,
   DecisionType,
@@ -8,10 +9,12 @@ import type {
   ExtractPlanResponse,
   Plan,
   QueueResponse,
+  QueueQuery,
   SellerView,
   Session,
   StudioPolicy,
 } from "./types";
+import { caseListQuery } from "./pagination";
 
 type JobView = {
   job_id: string;
@@ -125,7 +128,8 @@ async function downloadCall(token: string, path: string): Promise<{ blob: Blob; 
 export const api = {
   login: (subject: string, role: Session["role"], passcode: string) =>
     call<Session>(null, "POST", "/v1/auth/token", { subject, role, passcode }),
-  myCases: (token: string) => call<QueueResponse>(token, "GET", "/v1/me/cases?limit=50&offset=0"),
+  myCases: (token: string, query: CaseListQuery = {}) =>
+    call<QueueResponse>(token, "GET", `/v1/me/cases?${caseListQuery(query)}`),
   extractPlan: (token: string, sellerId: string, message: string) =>
     call<ExtractPlanResponse>(token, "POST", "/v1/copilot/extract-plan", {
       seller_id: sellerId,
@@ -136,11 +140,8 @@ export const api = {
     call<CaseSummary>(token, "POST", "/v1/cases", plan, { "Idempotency-Key": key }),
   sellerView: (token: string, caseId: string) => call<SellerView>(token, "GET", `/v1/cases/${caseId}/seller-view`),
   download: (token: string, path: string) => downloadCall(token, path),
-  queue: (token: string, status?: string, offset = 0) => {
-    const query = new URLSearchParams({ limit: "100", offset: String(offset) });
-    if (status) query.set("status", status);
-    return call<QueueResponse>(token, "GET", `/v1/queue?${query}`);
-  },
+  queue: (token: string, query: QueueQuery = {}) =>
+    call<QueueResponse>(token, "GET", `/v1/queue?${caseListQuery(query)}`),
   getJob: (token: string, jobId: string) => call<JobView>(token, "GET", `/v1/jobs/${jobId}`),
   uploadStatement: (
     token: string,

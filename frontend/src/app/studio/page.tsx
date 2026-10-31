@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Field, fieldClass } from "@/components/fields";
+import { Pagination } from "@/components/pagination";
 import { StudioTraffic } from "@/components/studio-traffic";
 import { Shell } from "@/components/shell";
 import { StatusBadge } from "@/components/status-badge";
@@ -13,6 +14,7 @@ import { errorText, personName, vnd } from "@/lib/format";
 import { useI18n, type Locale } from "@/lib/i18n";
 import type { Messages } from "@/lib/messages/vi";
 import type { EvalReport, StudioPolicy } from "@/lib/types";
+import { DEFAULT_CASE_PAGE_SIZE } from "@/lib/pagination";
 
 type Tab = "running" | "evaluation" | "bounds" | "traffic";
 
@@ -42,6 +44,8 @@ export default function StudioPage() {
   const [tab, setTab] = useState<Tab>("running");
   const [ruleQuery, setRuleQuery] = useState("");
   const [caseQuery, setCaseQuery] = useState("");
+  const [caseOffset, setCaseOffset] = useState(0);
+  const [casePageSize, setCasePageSize] = useState(DEFAULT_CASE_PAGE_SIZE);
   const [outcome, setOutcome] = useState<"all" | "pass" | "fail">("all");
 
   useEffect(() => {
@@ -80,6 +84,9 @@ export default function StudioPage() {
       return item.case_id.toLowerCase().includes(q) || item.status.toLowerCase().includes(q) || (item.expected_status ?? "").toLowerCase().includes(q);
     });
   }, [report, caseQuery, outcome]);
+
+  const visibleOffset = Math.min(caseOffset, Math.max(0, Math.ceil(cases.length / casePageSize) - 1) * casePageSize);
+  const visibleCases = cases.slice(visibleOffset, visibleOffset + casePageSize);
 
   if (!ready || !session) {
     return (
@@ -278,7 +285,7 @@ export default function StudioPage() {
               </div>
               <div className="mt-3">
                 <Field label={m.studio.findCase} htmlFor="case-query">
-                  <input id="case-query" className={fieldClass()} value={caseQuery} onChange={(event) => setCaseQuery(event.target.value)} placeholder={m.studio.findPlaceholder} />
+                  <input id="case-query" className={fieldClass()} value={caseQuery} onChange={(event) => { setCaseQuery(event.target.value); setCaseOffset(0); }} placeholder={m.studio.findPlaceholder} />
                 </Field>
               </div>
               <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={m.studio.evalResults}>
@@ -293,14 +300,14 @@ export default function StudioPage() {
                     key={value}
                     type="button"
                     className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-colors duration-200 ${outcome === value ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-                    onClick={() => setOutcome(value)}
+                    onClick={() => { setOutcome(value); setCaseOffset(0); }}
                   >
                     {label}
                   </button>
                 ))}
               </div>
               <ul className="mt-3 max-h-[32rem] space-y-2 overflow-y-auto">
-                {cases.map((item) => (
+                {visibleCases.map((item) => (
                   <li key={item.case_id}>
                     <button
                       type="button"
@@ -319,6 +326,7 @@ export default function StudioPage() {
                 ))}
               </ul>
               {cases.length === 0 ? <p className="mt-4 text-sm text-slate-600">{m.studio.noCase}</p> : null}
+              <Pagination offset={visibleOffset} pageSize={casePageSize} count={visibleCases.length} total={cases.length} hasMore={visibleOffset + casePageSize < cases.length} onOffsetChange={setCaseOffset} onPageSizeChange={(size) => { setCasePageSize(size); setCaseOffset(0); }} />
             </div>
             <div className="lg:col-span-7">
               {selectedCase ? (

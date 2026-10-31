@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { PanelLeftClose, Send } from "lucide-react";
 import { CaseRow } from "@/components/case-row";
+import { Pagination } from "@/components/pagination";
 import { StatementDownloads } from "@/components/statement-downloads";
 import { StatementUpload } from "@/components/statement-upload";
 import { PlanForm } from "@/components/plan-form";
@@ -13,10 +14,11 @@ import { TimeStamp } from "@/components/time-stamp";
 import { toast } from "@/components/toast";
 import { api, isAuthError } from "@/lib/api";
 import { useAuth, useRequireRole } from "@/lib/auth";
-import { caseCode, claimsOf, errorText, idempotencyKey, newestFirst, personName, vnd } from "@/lib/format";
+import { caseCode, claimsOf, errorText, idempotencyKey, personName, vnd } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { useCaseList } from "@/lib/use-case-list";
 import type { Messages } from "@/lib/messages/vi";
-import type { CaseSummary, ExtractPlanResponse, Plan, SellerView } from "@/lib/types";
+import type { ExtractPlanResponse, Plan, SellerView } from "@/lib/types";
 
 type ChatLine = { id: string; role: "user" | "assistant"; text: string };
 
@@ -27,7 +29,8 @@ export default function SellerPage() {
   const [lines, setLines] = useState<ChatLine[]>([{ id: "hello", role: "assistant", text: "" }]);
   const [draftText, setDraftText] = useState("");
   const [pending, setPending] = useState<ExtractPlanResponse | null>(null);
-  const [cases, setCases] = useState<CaseSummary[]>([]);
+  const caseList = useCaseList(session?.access_token, "seller");
+  const casesError = caseList.error ? errorText(caseList.error, m.errors, m.common.server) : "";
   const [view, setView] = useState<SellerView | null>(null);
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -53,22 +56,9 @@ export default function SellerPage() {
     handle.addEventListener("pointercancel", stop);
   }
   const thread = useRef<HTMLDivElement>(null);
-  const orderedCases = useMemo(() => newestFirst(cases), [cases]);
-
-  const loadCases = useCallback(async () => {
-    if (!session) return;
-    try {
-      const data = await api.myCases(session.access_token);
-      setCases(data.items);
-    } catch (err) {
-      if (isAuthError(err)) logout();
-      else toast(errorText(err, m.errors, m.common.server), "err");
-    }
-  }, [session, logout, m]);
-
   useEffect(() => {
-    if (session) void loadCases();
-  }, [session, loadCases]);
+    if (isAuthError(caseList.error)) logout();
+  }, [caseList.error, logout]);
 
   useEffect(() => {
     const node = thread.current;
@@ -104,7 +94,7 @@ export default function SellerPage() {
         ...current,
         { id: crypto.randomUUID(), role: "assistant", text: m.seller.calculated },
       ]);
-      await loadCases();
+      caseList.refresh(true);
     } catch (err) {
       toast(errorText(err, m.errors, m.common.server), "err");
     } finally {
@@ -272,15 +262,21 @@ export default function SellerPage() {
 
         <div className={copilotOpen ? "grid min-w-0 flex-1 gap-4 lg:grid-cols-12" : "contents"}>
         <aside aria-label={m.seller.myCases} className="flex max-h-[42vh] min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-4 lg:h-[min(720px,calc(100vh-7rem))] lg:max-h-[min(720px,calc(100vh-7rem))]">
-          <div className="text-sm font-semibold text-slate-900">{m.seller.myCases}</div>
-          {orderedCases.length === 0 ? <p className="mt-2 text-sm text-slate-500">{m.seller.noCases}</p> : null}
-          <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-            {orderedCases.map((item) => (
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-900">{m.seller.myCases}</h2>
+            <button type="button" disabled={caseList.loading} className="cursor-pointer text-xs font-medium text-brand-700 disabled:opacity-40" onClick={() => caseList.refresh(true)}>{m.pagination.refresh}</button>
+          </div>
+          {caseList.loading ? <p className="mt-2 text-sm text-slate-500" role="status">{m.common.loading}</p> : null}
+          {casesError ? <div className="mt-2 text-sm text-rose-600" role="alert"><p>{casesError}</p><button type="button" className="mt-1 cursor-pointer underline" onClick={() => caseList.refresh()}>{m.pagination.retry}</button></div> : null}
+          {!caseList.loading && !casesError && caseList.items.length === 0 ? <p className="mt-2 text-sm text-slate-500">{m.seller.noCases}</p> : null}
+          <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1" aria-busy={caseList.loading}>
+            {caseList.items.map((item) => (
               <li key={item.case_id}>
                 <CaseRow item={item} tone="brand" active={view?.case_id === item.case_id} onSelect={() => openCase(item.case_id)} />
               </li>
             ))}
           </ul>
+          <Pagination offset={caseList.offset} pageSize={caseList.pageSize} count={caseList.items.length} total={caseList.total} hasMore={caseList.hasMore} loading={caseList.loading} disabled={Boolean(casesError)} onOffsetChange={caseList.setOffset} onPageSizeChange={caseList.setPageSize} />
         </aside>
 
         <section className="min-h-[16rem] space-y-4 lg:col-span-8 lg:max-h-[min(720px,calc(100vh-7rem))] lg:overflow-y-auto">
@@ -396,7 +392,7 @@ export default function SellerPage() {
                       });
                       toast(m.seller.reran(before, next.version));
                       setView(await api.sellerView(session.access_token, view.case_id));
-                      await loadCases();
+                      caseList.refresh();
                     } catch (err) {
                       toast(errorText(err, m.errors, m.common.server), "err");
                     } finally {

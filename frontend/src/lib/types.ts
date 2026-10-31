@@ -74,10 +74,21 @@ export type SellerView = CaseSummary & {
   statement_period?: StatementPeriod | null;
 };
 
+export type CaseListQuery = {
+  limit?: number;
+  offset?: number;
+};
+
+export type QueueQuery = CaseListQuery & { status?: CaseStatus | "DECIDED" };
+
 export type QueueResponse = {
   items: CaseSummary[];
   limit: number;
   offset: number;
+  // Optional while the backend rolls out Agents/CASE_LIST_PAGINATION_API.md.
+  total?: number;
+  has_more?: boolean;
+  counts_by_status?: Partial<Record<CaseStatus, number>>;
 };
 
 export type WeekRow = {

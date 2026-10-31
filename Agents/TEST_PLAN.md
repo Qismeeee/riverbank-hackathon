@@ -48,3 +48,30 @@ Acceptance criteria của task đạt, kiểm tra phù hợp rủi ro, `make tes
 NFR latency/cost đo riêng có timestamp, cấu hình model, số case và percentile/trung bình. Không dùng thời gian pytest offline để suy ra SLA online.
 
 Nghiệm thu phải phân biệt kiểm tra tài liệu, test backend offline, test tích hợp và kiểm tra môi trường triển khai.
+
+## FE-02: phân trang hồ sơ
+
+Contract và acceptance criteria: [CASE_LIST_PAGINATION_API.md](CASE_LIST_PAGINATION_API.md). Lệnh dưới đây chạy từ thư mục `frontend/`, sau khi cài dependency bằng `npm ci`.
+
+```text
+npm run typecheck
+npm test
+npm run test:e2e
+npm run build
+```
+
+Playwright chạy browser headless và API mock trên localhost; không gọi backend demo. Windows mặc định dùng Edge đã cài. Có thể chọn browser qua `PLAYWRIGHT_CHANNEL`. Linux/macOS mặc định dùng Chromium của Playwright, cài bằng `npx playwright install chromium` nếu môi trường chưa có.
+
+Kết quả ngày 31/10/2026, branch `frontend`, Windows/PowerShell, Node v22.15.0, npm 10.9.2, Next.js 15.5.28:
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` | Exit 0, không lỗi TypeScript |
+| `npm test` | 11 pass, 0 fail, 0 skip |
+| `npm run test:e2e` | 9 pass, 0 fail, 0 skip, Edge headless |
+| `npm run build` | Exit 0, build production thành công |
+| `git diff --check` (từ gốc repo) | Exit 0 |
+
+Các test bao gồm duyệt đủ 125 hồ sơ, lọc trạng thái nằm ngoài 100 hồ sơ mở đầu, lookahead khi trang cuối đầy, tổng/counts từ server, union DECIDED và fallback với 265 hồ sơ, lỗi một luồng/401/403/5xx, response đến muộn, trang mất do dữ liệu đổi đồng thời, Seller giữ chi tiết khi chuyển trang và về trang đầu sau khi tạo mới, Studio tìm/lọc toàn bộ báo cáo trước khi cắt trang. Đã xem ảnh Seller/Lender ở viewport 375×900; thanh phân trang không tràn ngang.
+
+Backend chưa được triển khai theo contract mới trong task này. Chưa chạy kiểm thử API thật/PostgreSQL hoặc `make test`: branch `frontend` không chứa backend/Makefile. Backend cần chạy riêng ma trận acceptance trong API spec trước khi xác nhận tích hợp thật. Bảng Traffic “hồ sơ gần đây” vẫn là mẫu dữ liệu của dashboard; các danh sách được phân trang ở đây là Lender, Seller và case eval của Studio.

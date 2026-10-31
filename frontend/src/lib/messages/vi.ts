@@ -23,6 +23,18 @@ export const vi = {
     chartAria: "Số dư tiền mặt theo tuần",
     weekMark: "T",
   },
+  pagination: {
+    label: "Phân trang hồ sơ",
+    previous: "Trước",
+    next: "Sau",
+    first: "Trang đầu",
+    last: "Trang cuối",
+    perPage: "Mỗi trang",
+    refresh: "Làm mới",
+    retry: "Thử lại",
+    page: (page: number, pages: number | undefined) => pages == null ? `Trang ${page}` : `Trang ${page} / ${pages}`,
+    range: (start: number, end: number, total: number | undefined) => total == null ? `Hiển thị ${start}–${end}` : `${start}–${end} / ${total} hồ sơ`,
+  },
   nav: {
     home: "Tổng quan",
     seller: "Seller",

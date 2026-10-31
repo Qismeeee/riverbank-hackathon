@@ -25,6 +25,18 @@ export const zh: Messages = {
     chartAria: "每周现金余额",
     weekMark: "周",
   },
+  pagination: {
+    label: "申请分页",
+    previous: "上一页",
+    next: "下一页",
+    first: "首页",
+    last: "末页",
+    perPage: "每页",
+    refresh: "刷新",
+    retry: "重试",
+    page: (page, pages) => pages == null ? `第 ${page} 页` : `第 ${page} / ${pages} 页`,
+    range: (start, end, total) => total == null ? `显示 ${start}–${end}` : `${start}–${end} / ${total} 个申请`,
+  },
   nav: {
     home: "概览",
     seller: "卖家",

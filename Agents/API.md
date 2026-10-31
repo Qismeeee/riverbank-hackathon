@@ -2,6 +2,8 @@
 
 Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết](API.md) và [FE integration](API.md). Router và schema được tổ chức trong `../api/routers/` và `../api/services/underwriting/models.py`.
 
+Contract bổ sung cho danh sách hồ sơ: [API phân trang Lender/Seller và nghiệm thu FE-02](CASE_LIST_PAGINATION_API.md). Backend cần bổ sung metadata và bộ lọc `DECIDED`; frontend giữ tương thích response cũ qua `limit/offset`.
+
 ## API lõi
 
 | Method | Path | Vai trò |

@@ -1,54 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { CaseRow } from "@/components/case-row";
+import { Pagination } from "@/components/pagination";
 import { Shell } from "@/components/shell";
-import { toast } from "@/components/toast";
-import { api } from "@/lib/api";
 import { useRequireRole } from "@/lib/auth";
-import { errorText, newestFirst, statusLabel } from "@/lib/format";
+import { errorText, statusLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
-import type { CaseSummary } from "@/lib/types";
+import { useCaseList } from "@/lib/use-case-list";
 
 const FILTERS = ["ALL", "PENDING_REVIEW", "ESCALATED", "AWAITING_STATEMENT", "NO_LOAN_NEEDED", "DECIDED"] as const;
-
-type FilterId = (typeof FILTERS)[number];
 
 export default function LenderPage() {
   const { session, ready } = useRequireRole("underwriter");
   const { m } = useI18n();
-  const [items, setItems] = useState<CaseSummary[]>([]);
-  const [decided, setDecided] = useState<CaseSummary[]>([]);
-  const [filter, setFilter] = useState<FilterId>("PENDING_REVIEW");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!session) return;
-    api
-      .queue(session.access_token)
-      .then((data) => setItems(data.items))
-      .catch((err: unknown) => {
-        const text = errorText(err, m.errors, m.common.server);
-        setError(text);
-        toast(text, "err");
-      });
-    Promise.all([api.queue(session.access_token, "ACCEPTED"), api.queue(session.access_token, "REJECTED")])
-      .then(([accepted, rejected]) => setDecided(newestFirst([...accepted.items, ...rejected.items])))
-      .catch((err: unknown) => {
-        const text = errorText(err, m.errors, m.common.server);
-        setError(text);
-        toast(text, "err");
-      });
-  }, [session, m]);
-
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of items) map[item.status] = (map[item.status] ?? 0) + 1;
-    return map;
-  }, [items]);
-
-  const ordered = useMemo(() => newestFirst(items), [items]);
-  const visible = filter === "DECIDED" ? decided : filter === "ALL" ? ordered : ordered.filter((item) => item.status === filter);
+  const list = useCaseList(session?.access_token, "queue", "PENDING_REVIEW");
+  const filter = list.filter ?? "ALL";
+  const error = list.error ? errorText(list.error, m.errors, m.common.server) : "";
+  const counts = list.counts;
+  const openCount = counts
+    ? (counts.PENDING_REVIEW ?? 0) + (counts.ESCALATED ?? 0) + (counts.AWAITING_STATEMENT ?? 0) + (counts.NO_LOAN_NEEDED ?? 0)
+    : filter === "ALL" ? list.total : undefined;
 
   if (!ready || !session) {
     return (
@@ -66,14 +37,19 @@ export default function LenderPage() {
             <h1 className="text-2xl font-semibold text-slate-900">{m.lender.title}</h1>
             <p className="mt-1 text-sm text-slate-600">{m.lender.lead}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-            <div className="text-slate-500">{m.lender.open}</div>
-            <div className="tnum text-lg font-semibold text-slate-900">{items.length}</div>
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={list.loading} onClick={() => list.refresh(true)} className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:opacity-40">{m.pagination.refresh}</button>
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+              <div className="text-slate-500">{m.lender.open}</div>
+              <div className="tnum text-lg font-semibold text-slate-900">{openCount ?? "—"}</div>
+            </div>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {FILTERS.map((id) => {
-            const count = id === "ALL" ? items.length : id === "DECIDED" ? decided.length : counts[id] ?? 0;
+            const count = id === "ALL" ? openCount : id === "DECIDED"
+              ? counts ? (counts.ACCEPTED ?? 0) + (counts.REJECTED ?? 0) : filter === id ? list.total : undefined
+              : counts?.[id] ?? (filter === id ? list.total : undefined);
             const label =
               id === "ALL" ? m.lender.all : id === "DECIDED" ? m.lender.decided : id === "AWAITING_STATEMENT" ? m.lender.statement : statusLabel(id, null, m.status, m.reason);
             return (
@@ -81,22 +57,25 @@ export default function LenderPage() {
                 key={id}
                 type="button"
                 className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors duration-200 ${filter === id ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-200 bg-white hover:border-teal-300 hover:bg-teal-50/60"}`}
-                onClick={() => setFilter(id)}
+                aria-pressed={filter === id}
+                onClick={() => list.setFilter(id === "ALL" ? undefined : id)}
               >
-                {label} {count}
+                {label}{count == null ? "" : ` ${count}`}
               </button>
             );
           })}
         </div>
-        {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
-        <ul className="mt-4 space-y-2">
-          {visible.map((item) => (
+        {error ? <div className="mt-4 flex items-center gap-3 text-sm text-rose-600" role="alert"><p>{error}</p><button type="button" className="cursor-pointer underline" onClick={() => list.refresh()}>{m.pagination.retry}</button></div> : null}
+        {list.loading ? <p className="mt-4 text-sm text-slate-600" role="status">{m.common.loading}</p> : null}
+        <ul className="mt-4 space-y-2" aria-busy={list.loading}>
+          {list.items.map((item) => (
             <li key={item.case_id}>
               <CaseRow item={item} tone="teal" href={`/lender/${item.case_id}`} />
             </li>
           ))}
         </ul>
-        {visible.length === 0 ? <p className="mt-6 text-sm text-slate-600">{m.lender.empty}</p> : null}
+        {!list.loading && !error && list.items.length === 0 ? <p className="mt-6 text-sm text-slate-600">{m.lender.empty}</p> : null}
+        <Pagination offset={list.offset} pageSize={list.pageSize} count={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loading} disabled={Boolean(error)} onOffsetChange={list.setOffset} onPageSizeChange={list.setPageSize} />
       </main>
     </Shell>
   );

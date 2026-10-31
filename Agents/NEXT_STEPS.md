@@ -9,6 +9,7 @@ Kế hoạch triển khai được chia theo dependency và tiêu chí nghiệm 
 | ENG-01 dòng tiền và rủi ro | P1 sau SRC-01 | CashFlowEngine, FeatureBuilder, PD và CIC adapter có điều kiện | Golden A/B khớp, gap 0 bỏ PD/CIC/rule, thiếu dữ liệu có kết quả rõ |
 | CORE-01 workflow và evidence | P1 sau ENG-01, VER-01 và POL-01 | API/auth, trạng thái, memo/validator, sao kê, quyết định và handoff | A/B/C/E/F đạt TEST_PLAN, audit chỉ thêm, người quyết định, số khớp evidence |
 | FE-01 frontend lõi | P1 sau CORE-01 | Seller form/list/view, lender queue/detail/evidence/decision/handoff, studio | A/B/C/E/F qua UI, role đúng, idempotency và version conflict đúng, không tự tính tiền |
+| FE-02 phân trang hồ sơ | Ưu tiên trước demo, sau FE-01 | Phân trang Lender/Seller/Studio và [contract backend](CASE_LIST_PAGINATION_API.md) | >100 hồ sơ truy cập đủ; lọc server trước phân trang; DECIDED hợp nhất đúng; không lấy độ dài trang làm tổng; đổi filter/size reset trang |
 | VER-01 version điều khoản | P1 sau BASE-01 | Thiết kế/migration/repository cho version mới và SUPERSEDED | Counter thêm bản mới, lịch sử cũ không đổi, rollback/concurrency đúng, không nhầm cases.version |
 | POL-01 xác nhận policy | P1 sau BASE-01 | Quy trình artifact policy/test/xác nhận, loader fail closed | Chặn bộ chưa xác nhận, hash lệch hoặc test không đạt, có audit người xác nhận |
 | DOC-01 duy trì tài liệu | P1 sau BASE-01 | Cập nhật tài liệu theo các quyết định nghiệp vụ và contract | BRD/SRS/SAD/API thống nhất, các FR có tiêu chí nghiệm thu và test truy vết |

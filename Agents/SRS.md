@@ -16,7 +16,7 @@ Nguồn đầy đủ: [SRS gốc](SRS.md). Bảng này giữ nhóm ID để team
 | FR-18 policy được xác nhận | Chỉ nạp policy đã test và người xác nhận | Loader kiểm hash, kiểm thử và xác nhận của người | Task POL-01 và test loader |
 | FR-21..23 sao kê | Đúng điều kiện R05, đối chiếu cùng kỳ, lệch chuyển người | `api/services/statements/`, `underwriting/service.py` | `api/tests/test_statements.py` |
 | FR-24..28 văn bản | Hai bản cùng evidence, không số mới, không lãi/phí tự tạo | `api/services/underwriting/memo.py`, `api/services/guard.py` | `api/tests/test_memo.py` |
-| FR-29..31 hàng đợi/quyết định | Đúng role, ngân hàng quyết định và có actor | `api/routers/underwriting.py`, `api/routers/auth.py` | `api/tests/test_auth.py`, `test_underwriting.py` |
+| FR-29..31 hàng đợi/quyết định | Đúng role, ngân hàng quyết định và có actor; [phân trang/lọc đủ >100 hồ sơ](CASE_LIST_PAGINATION_API.md) | `api/routers/underwriting.py`, `api/routers/auth.py`, `frontend/src/app/lender/page.tsx` | `api/tests/test_auth.py`, `test_underwriting.py`, `frontend/tests/pagination.test.ts`, `frontend/tests/pagination.spec.ts` |
 | FR-31b hết hiệu lực | Chặn handoff quá hạn, đích đến cần thẩm định lại | `api/services/underwriting/service.py` và luồng tái thẩm định | `api/tests/test_underwriting.py`, task EXP-01 |
 | FR-32..34 sửa điều kiện | Tính lại PD/rule/lịch, không chấp nhận gap 0 hoặc hard fail | `api/services/underwriting/service.py` | `api/tests/test_underwriting.py`, `test_underwriting_risk.py` |
 | FR-35..37 bàn giao | Gói đúng quyết định, retry không mất quyết định, không gọi tiền core | `api/services/underwriting/service.py`, `sources.py` | `api/tests/test_underwriting.py` |

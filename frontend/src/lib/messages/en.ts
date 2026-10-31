@@ -25,6 +25,18 @@ export const en: Messages = {
     chartAria: "Cash balance by week",
     weekMark: "W",
   },
+  pagination: {
+    label: "Case pagination",
+    previous: "Previous",
+    next: "Next",
+    first: "First page",
+    last: "Last page",
+    perPage: "Per page",
+    refresh: "Refresh",
+    retry: "Retry",
+    page: (page, pages) => pages == null ? `Page ${page}` : `Page ${page} / ${pages}`,
+    range: (start, end, total) => total == null ? `Showing ${start}–${end}` : `${start}–${end} / ${total} cases`,
+  },
   nav: {
     home: "Overview",
     seller: "Seller",
