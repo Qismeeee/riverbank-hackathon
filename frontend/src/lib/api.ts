@@ -24,7 +24,7 @@ type JobView = {
   updated_at: string;
 };
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://3-0-194-9.sslip.io";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://13-214-87-165.sslip.io";
 
 export class ApiError extends Error {
   status: number;
