@@ -29,10 +29,7 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     log_level: Literal["critical", "error", "warning", "info", "debug"] = "info"
     allowed_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: [
-            "http://localhost:3000",
-            "https://ezxriverbank-hackathon.vercel.app",
-        ],
+        default_factory=lambda: ["http://localhost:3000"],
         validation_alias="ALLOWED_ORIGINS",
     )
     database_url: SecretStr | None = Field(
@@ -49,35 +46,6 @@ class Settings(BaseSettings):
     aws_profile: str | None = Field(default=None, validation_alias="AWS_PROFILE")
     aws_region: str = Field(default="ap-southeast-1", validation_alias="AWS_REGION")
     s3_bucket: str | None = Field(default=None, validation_alias="S3_BUCKET")
-    kafka_bootstrap_servers: str | None = Field(
-        default=None, validation_alias="KAFKA_BOOTSTRAP_SERVERS"
-    )
-    kafka_username: str = Field(default="riverbank", validation_alias="KAFKA_USERNAME")
-    kafka_password: SecretStr | None = Field(
-        default=None, validation_alias="KAFKA_PASSWORD"
-    )
-    kafka_password_file: Path | None = Field(
-        default=None, validation_alias="KAFKA_PASSWORD_FILE"
-    )
-    kafka_topic_prefix: str = Field(
-        default="riverbank-hackathon", validation_alias="KAFKA_TOPIC_PREFIX"
-    )
-    redis_host: str | None = Field(default=None, validation_alias="REDIS_HOST")
-    redis_port: int = Field(default=6379, ge=1, le=65535, validation_alias="REDIS_PORT")
-    redis_username: str = Field(default="riverbank", validation_alias="REDIS_USERNAME")
-    redis_password: SecretStr | None = Field(
-        default=None, validation_alias="REDIS_PASSWORD"
-    )
-    redis_password_file: Path | None = Field(
-        default=None, validation_alias="REDIS_PASSWORD_FILE"
-    )
-    redis_key_prefix: str = Field(
-        default="riverbank-hackathon:", validation_alias="REDIS_KEY_PREFIX"
-    )
-    cognito_issuer: str | None = Field(default=None, validation_alias="COGNITO_ISSUER")
-    cognito_client_id: str | None = Field(
-        default=None, validation_alias="COGNITO_CLIENT_ID"
-    )
     ssh_host: str | None = Field(default=None, validation_alias="SSH_HOST")
     ssh_user: str = Field(default="ubuntu", validation_alias="SSH_USER")
     ssh_key_file: Path | None = Field(default=None, validation_alias="SSH_KEY_FILE")

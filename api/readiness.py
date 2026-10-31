@@ -2,14 +2,10 @@
 
 import json
 import logging
-from pathlib import Path
 
 import boto3
 import psycopg
 from botocore.config import Config
-from kafka.admin import KafkaAdminClient
-from pydantic import SecretStr
-from redis import Redis
 
 from api.config import Settings
 
@@ -19,67 +15,11 @@ AWS_TIMEOUTS = Config(
 )
 
 
-def read_password(value: SecretStr | None, path: Path | None) -> str:
-    if value is not None:
-        return value.get_secret_value()
-    if path is not None:
-        return path.read_text().strip()
-    raise ValueError("Service credential missing")
-
-
-def check_services(settings: Settings) -> dict[str, str]:
-    checks = {}
-    if settings.redis_host:
-        checks["redis"] = "unavailable"
-        try:
-            password = read_password(
-                settings.redis_password, settings.redis_password_file
-            )
-            with Redis(
-                host=settings.redis_host,
-                port=settings.redis_port,
-                username=settings.redis_username,
-                password=password,
-                socket_connect_timeout=2,
-                socket_timeout=2,
-            ) as client:
-                if client.ping() is not True:
-                    raise ValueError("Redis ping failed")
-            checks["redis"] = "ok"
-        except Exception as error:
-            logger.warning("Redis readiness failed (%s)", type(error).__name__)
-    if settings.kafka_bootstrap_servers:
-        checks["kafka"] = "unavailable"
-        try:
-            password = read_password(
-                settings.kafka_password, settings.kafka_password_file
-            )
-            client = KafkaAdminClient(
-                bootstrap_servers=settings.kafka_bootstrap_servers,
-                security_protocol="SASL_PLAINTEXT",
-                sasl_mechanism="PLAIN",
-                sasl_plain_username=settings.kafka_username,
-                sasl_plain_password=password,
-                request_timeout_ms=3000,
-                bootstrap_timeout_ms=3000,
-            )
-            try:
-                if not client.describe_cluster()["brokers"]:
-                    raise ValueError("Kafka cluster has no brokers")
-            finally:
-                client.close()
-            checks["kafka"] = "ok"
-        except Exception as error:
-            logger.warning("Kafka readiness failed (%s)", type(error).__name__)
-    return checks
-
-
 def check_dependencies(settings: Settings) -> dict[str, str]:
     if settings.environment not in {"cloud", "production"}:
         return {}
 
     checks = {"database": "unavailable", "s3": "unavailable"}
-    checks.update(check_services(settings))
     try:
         session = boto3.Session(
             profile_name=settings.aws_profile, region_name=settings.aws_region

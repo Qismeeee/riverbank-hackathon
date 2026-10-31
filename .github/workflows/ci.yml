@@ -39,12 +39,15 @@ jobs:
   docker:
     name: Docker ARM64
     needs: quality
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build Linux ARM64 image without publishing
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -58,8 +61,6 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Start container and check HTTP health
         run: python3 scripts/docker_smoke.py --platform linux/arm64
-      - name: Authenticated Kafka/Redis IO and persistence
-        run: python3 scripts/services_smoke.py --api-image riverbank-hackathon:base-01
       - name: Validate deployment configuration
         env:
           API_IMAGE: riverbank-hackathon:base-01
@@ -80,18 +81,17 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event_name != 'pull_request' && vars.ENABLE_DEPLOY == 'true'
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 40
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     environment: production
     permissions:
       contents: read
-      id-token: write
+      packages: write
     env:
-      AWS_REGION: ap-southeast-1
-      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
-      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
-      DEPLOY_BUCKET: ${{ vars.DEPLOY_BUCKET }}
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
       SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -99,39 +99,23 @@ jobs:
           persist-credentials: false
       - name: Validate production settings
         run: |
-          for name in AWS_ROLE_ARN ECR_REPOSITORY EC2_INSTANCE_ID DEPLOY_BUCKET SITE_ADDRESS; do
+          for name in EC2_HOST EC2_USER EC2_SSH_KEY EC2_KNOWN_HOSTS SITE_ADDRESS; do
             if [ -z "${!name}" ]; then echo "Missing production setting: $name" >&2; exit 1; fi
           done
-          [[ "$AWS_ROLE_ARN" =~ ^arn:aws:iam::[0-9]{12}:role/riverbank-hackathon-deploy$ ]]
-          [[ "$ECR_REPOSITORY" =~ ^[0-9]{12}\.dkr\.ecr\.ap-southeast-1\.amazonaws\.com/riverbank-hackathon-api$ ]]
-          [[ "$EC2_INSTANCE_ID" =~ ^i-[a-f0-9]+$ ]]
-          [[ "$DEPLOY_BUCKET" =~ ^[a-z0-9][a-z0-9.-]+$ ]]
+          [[ "$EC2_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$EC2_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           [[ "$SITE_ADDRESS" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]
-          echo "IMAGE=$ECR_REPOSITORY:$GITHUB_SHA" >> "$GITHUB_ENV"
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: riverbank-${{ github.run_id }}
-          allowed-account-ids: "424016506356"
-      - name: Authenticate to the private registry
-        run: |
-          registry="${ECR_REPOSITORY%%/*}"
-          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
-      - name: Check immutable commit tag
-        id: image
-        run: |
-          if aws ecr describe-images --repository-name riverbank-hackathon-api \
-            --image-ids "imageTag=$GITHUB_SHA" > /dev/null 2> "$RUNNER_TEMP/ecr-check-error"; then
-            echo 'exists=true' >> "$GITHUB_OUTPUT"
-          elif ! grep -q ImageNotFoundException "$RUNNER_TEMP/ecr-check-error"; then
-            cat "$RUNNER_TEMP/ecr-check-error" >&2
-            exit 1
-          fi
+          platforms: arm64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-        if: steps.image.outputs.exists != 'true'
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish tested commit using the CI build cache
-        if: steps.image.outputs.exists != 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -139,36 +123,23 @@ jobs:
           push: true
           tags: ${{ env.IMAGE }}
           cache-from: type=gha
-      - name: Upload release and deploy through SSM with rollback
+      - name: Transfer release and deploy with rollback
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tar -czf "$RUNNER_TEMP/infra.tar.gz" \
-            -C infra compose.yaml compose.aws.yaml Caddyfile deploy.sh redis.conf \
-            -C ../scripts service_secrets.py monitor_services.py
-          aws s3 cp "$RUNNER_TEMP/infra.tar.gz" \
-            "s3://$DEPLOY_BUCKET/riverbank-hackathon/releases/$GITHUB_SHA/infra.tar.gz" --only-show-errors
-          command_id=$(aws ssm send-command --instance-ids "$EC2_INSTANCE_ID" \
-            --document-name riverbank-hackathon-deploy --parameters "Mode=deploy,Image=$IMAGE" \
-            --comment "Deploy $GITHUB_SHA" --query Command.CommandId --output text)
-          success=false
-          for attempt in $(seq 1 180); do
-            if ! status=$(aws ssm get-command-invocation --command-id "$command_id" \
-              --instance-id "$EC2_INSTANCE_ID" --plugin-name Deploy --query Status --output text \
-              2> "$RUNNER_TEMP/ssm-check-error"); then
-              if ! grep -Eq 'InvocationDoesNotExist|InvalidPluginName' "$RUNNER_TEMP/ssm-check-error"; then
-                cat "$RUNNER_TEMP/ssm-check-error" >&2
-                exit 1
-              fi
-            fi
-            case "$status" in
-              Success) success=true; break ;;
-              Failed|Cancelled|TimedOut|Cancelling) break ;;
-            esac
-            sleep 10
-          done
-          if [ "$success" != true ]; then
-            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$EC2_INSTANCE_ID" --plugin-name Deploy \
-              --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
-            exit 1
-          fi
-          curl --fail --silent --show-error --max-time 10 "https://$SITE_ADDRESS/health"
-          curl --fail --silent --show-error --max-time 30 "https://$SITE_ADDRESS/ready"
+          key="$RUNNER_TEMP/deploy-key"
+          known_hosts="$RUNNER_TEMP/known-hosts"
+          trap 'rm -f -- "$key" "$known_hosts"' EXIT
+          umask 077
+          printf '%s\n' "$EC2_SSH_KEY" > "$key"
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > "$known_hosts"
+          ssh_options=(-i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=10
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          target="$EC2_USER@$EC2_HOST"
+          release="/opt/riverbank-hackathon/releases/$GITHUB_SHA"
+          ssh "${ssh_options[@]}" "$target" "mkdir -p '$release'"
+          scp "${ssh_options[@]}" infra/compose.yaml infra/compose.aws.yaml infra/Caddyfile infra/deploy.sh "$target:$release/"
+          printf '%s\n' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$target" \
+            "bash '$release/deploy.sh' '$IMAGE' 'https://$SITE_ADDRESS/health' '$GHCR_USER'"

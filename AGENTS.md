@@ -18,7 +18,3 @@
 ## Quy trình
 
 Giữ thay đổi của người khác. Làm từng task có acceptance criteria. Thiết lập CI/test trong BASE-01, ghi rõ kiểm tra đã chạy. Không commit secrets hoặc raw PII. Không merge/deploy khi chưa được giao việc đó.
-
-## Skill hạ tầng
-
-Khi làm BASE-01, CI/CD hoặc vận hành AWS, đọc [deploy-ops](.agents/skills/deploy-ops/SKILL.md). Skill ghi bối cảnh repo mới, thứ tự triển khai và đối chiếu hạ tầng Riverbank cũ. Kiểm tra implementation hiện có trước khi dùng; tài liệu kiến trúc không chứng minh tài nguyên đã được dựng.

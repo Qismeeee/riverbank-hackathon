@@ -39,16 +39,6 @@ EC2 mới `i-06ab8a545deb7a7f3` có EIP `3.0.194.9`, HTTPS `3-0-194-9.sslip.io`;
 
 Stack clone cũ trên máy mới đã dừng và giữ volume; máy cũ `13.214.87.165` không đổi, health HTTPS vẫn đạt. Image đang chạy là bản **validation từ working tree**, không giả release SHA. GitHub environment production và SSH riêng đã cấu hình/kiểm, CD tắt chờ người dùng push/merge. Chưa có run CD GitHub của phần mới; không tự commit/push/merge. `make test` đạt 26 pass, 0 skip; Docker ARM64 build/smoke đạt. Xem README để bật CD sau khi code mới ở main và các giới hạn HA/root EBS.
 
-## Hạ tầng mở rộng — 31/10/2026
-
-Đã dựng Kafka 4.1.2 KRaft/SASL và Redis 7.4.12 ACL/AOF trên EC2 ARM64 mới, credential riêng trong Secrets Manager, không publish cổng. Có topic commands/events/dlq, volume và giới hạn RAM/retention. Produce/consume, namespace ACL, Python clients và persistence sau restart đạt trên native ARM64. Dev Windows kết nối bốn phụ thuộc qua tunnel đã kiểm; không ghi DB hoặc gọi model.
-
-CloudFormation platform UPDATE_COMPLETE: Cognito Essentials/public client Code flow/TOTP MFA, groups seller/underwriter; ECR immutable; OIDC trust có immutable repo IDs/environment; deploy/runtime role riêng có permissions boundary; SSM document. ECR validation push/pull bằng role, SSM Verify Success và HTTPS readiness bốn dependency đạt. Chưa kiểm GitHub OIDC assume/CD end-to-end vì code mới chưa được người dùng push/merge; ENABLE_DEPLOY=false. Chưa triển khai JWT/ownership trong BE hoặc callback PKCE trong FE. Callback và config công khai ở README/.env.frontend local.
-
-CloudWatch có log bốn service, metric RAM/đĩa/ServiceReady, 7 alarm gắn SNS. Budget 30 USD/tháng trước credit, không hard cap; không nâng Paid plan. RDS giữ backup 1 ngày/deletion protection; chưa diễn tập restore. Single EC2/RDS Single-AZ không HA, root EBS cũ chưa mã hóa. Pool từ lần tạo lỗi còn giữ deletion protection để chờ đồng ý cleanup; pool active là ap-southeast-1_IwpfqsPbI.
-
-make test mới nhất 34 pass, cfn-lint/Ruff/actionlint/ShellCheck đạt; cảnh báo deprecation thuộc kafka-python còn hiển thị. Máy cũ 13.214.87.165 giữ nguyên. Không git add/commit/push/merge. Bước vận hành tiếp là người dùng đưa code mới qua PR/main, bật CD và xác minh release SHA/HTTPS. Bước sản phẩm vẫn SRC-01/VER-01/POL-01 theo backlog.
-
 ## Thực hiện FE-01
 
 1. Xác định package frontend và thiết kế màn hình seller, lender, studio theo BRD/SRS.

@@ -13,7 +13,7 @@ def offline_environment(monkeypatch: pytest.MonkeyPatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
     for name in os.environ:
-        if name.startswith(("RIVERBANK_", "KAFKA_", "REDIS_", "COGNITO_")):
+        if name.startswith("RIVERBANK_"):
             monkeypatch.delenv(name)
     for name in (
         "AWS_ACCESS_KEY_ID",
