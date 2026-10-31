@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint (locked version)
+        entry: uv run --offline --no-sync ruff check
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: Ruff format check (locked version)
+        entry: uv run --offline --no-sync ruff format --check
+        language: system
+        types_or: [python, pyi]
