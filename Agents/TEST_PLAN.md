@@ -31,6 +31,23 @@ make test
 | Quyết định hết hạn | Handoff bị chặn, hướng dẫn tái thẩm định |
 | CSV/PDF/ảnh | CSV parser, PDF chữ parser, scan/ảnh OCR có điều kiện và lỗi rõ |
 
+## Nghiệm thu database mini
+
+Thiết kế ở [database/riverbank-mini.dbml](../database/riverbank-mini.dbml), hiện chưa có SQL migration để chạy. Các kiểm tra sau phải được xây trong DB-01, không phải kết quả đã chạy:
+
+- Migration tạo đúng bảng/enum/FK/check của DBML, kiểm PostgreSQL thực và rollback.
+- Consent thuộc đúng seller, purpose/expiry/revocation được service kiểm trước source fetch. Null expiry xử lý theo contract đã chốt.
+- Evidence và generated document không tham chiếu run/application khác. Decision chỉ chọn run COMPLETED và document PASSED cùng application.
+- Mỗi application tối đa một quyết định cuối. Hai người quyết định đồng thời không ghi trùng, version_no được kiểm/tăng cùng transaction và event.
+- Plan bất biến sau submit, counter tạo run mới, run COMPLETED và decision không sửa/xóa. application_events append-only ở cả API lẫn DB.
+- Tiền NUMERIC/Decimal và chuỗi tiền JSONB round-trip chính xác, canonical hash ổn định. Fixture A/B giữ số cũ, kiểm phần lẻ theo rule được chốt.
+- Cùng request key/body tạo application/decision không sinh thêm side effect, khác body báo lỗi. Run key unique không thay thế kiểm HTTP idempotency.
+- Handoff tạo cùng decision transaction, payload/key đóng băng, retry/recovery không gửi hai gói logic, LOS lỗi không đổi quyết định.
+- Document upload dùng object key/version và content hash, không lưu presigned URL làm tham chiếu gốc. Quyền tải file được kiểm theo application.
+- DRAFT/BLOCKED_INPUT/VERIFYING/WITHDRAWN và run FAILED tuân thủ transition matrix đã khóa, không tự cho phép chuyển chỉ vì enum có giá trị đó.
+
+Mini không có bảng version điều khoản ACTIVE/SUPERSEDED. Chỉ kiểm lifecycle đó sau khi VER-01/P7 được yêu cầu mở rộng và có schema riêng.
+
 ## Tệp test theo mảng
 
 - Engine/policy: `api/tests/test_cashflow.py`, `test_rules.py`, `test_golden.py`.

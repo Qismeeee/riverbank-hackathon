@@ -1,6 +1,6 @@
 # Luồng và quy tắc nghiệp vụ
 
-Nguồn: [policy](../policy/policy.md), [tham số](../policy/parameters.yaml), [fixture tính tay](../policy/worked-examples.md), [luồng đầy đủ](BUSINESS.md).
+Nguồn: [policy](../policy/policy.md), [tham số](../policy/parameters.yaml), [fixture tính tay](../policy/worked-examples.md), [database mini](../database/riverbank-mini.dbml).
 
 ## Vòng đời nghiệp vụ
 
@@ -60,7 +60,7 @@ R05 xét `max(requested_amount, amount_proposed)` trong service. Chỉ vượt h
 | `ACCEPTED` | Người ngân hàng chấp nhận, có thể bấm handoff |
 | `REJECTED` | Người ngân hàng từ chối, không có số giải ngân |
 
-`ANALYZING` là trạng thái nội bộ, input bị chặn trả 422 không lưu case. Handoff giữ nguyên quyết định và có `handoff.status` riêng. `ACCEPT_COUNTER` chạy lại lịch trích, PD và policy rồi mới ghi nhận. Kỳ hạn cuối có thể dài hơn số người duyệt nhập.
+DBML có thêm DRAFT/BLOCKED_INPUT/ANALYZING/VERIFYING/WITHDRAWN. Đây là tập giá trị lưu trữ, không tự xác định quyền chuyển state. Input sai trước khi tạo hồ sơ trả 422, chỉ lưu dữ liệu đã qua guard. Lifecycle chi tiết cần khóa trước workflow. Handoff giữ nguyên quyết định và có status riêng. ACCEPT_COUNTER tạo run mới, chạy lại lịch/PD/policy rồi mới ghi nhận một quyết định cuối bất biến. Kỳ hạn cuối có thể dài hơn số người duyệt nhập. Mini không có bảng version điều khoản ACTIVE/SUPERSEDED.
 
 ## Fixture để hiểu sản phẩm
 

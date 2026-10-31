@@ -1,6 +1,6 @@
 # Yêu cầu nghiệp vụ Riverbank
 
-Nguồn chi tiết: [BRD gốc](BRD.md). Mã BR và BL được dùng để truy vết nghiệp vụ sang yêu cầu phần mềm. Các quyết định cần chốt nằm tại [GAPS.md](GAPS.md).
+Mã BR và BL được dùng để truy vết nghiệp vụ sang yêu cầu phần mềm. Database mini theo [schema người dùng chọn](../database/riverbank-mini.dbml). Các quyết định còn cần chốt nằm tại [GAPS.md](GAPS.md).
 
 ## Bài toán và giá trị
 
@@ -32,12 +32,14 @@ BR-08 đến BR-15 và BR-21: đề xuất tiền/kỳ hạn, giới hạn kỳ 
 
 BR-16 đến BR-20: memo và bản seller cùng evidence, người duyệt, đóng gói bàn giao và nhật ký.
 
+Phạm vi mini đã chốt: một marketplace, một ngân hàng đối tác, VND, một shop cho mỗi seller record, một application cho mỗi lô và một quyết định cuối bất biến. Kế hoạch mới sau submit cần application mới. Counter trước quyết định tạo assessment run mới.
+
 P0 định danh thực, P4 hợp đồng, P5 giải ngân, P6 trích tiền, P8 xử lý khoản vay thuộc tích hợp ngân hàng, ngoài phạm vi lõi. P7 là mở rộng đề xuất cơ cấu có người duyệt. Không xây cơ chế tự giải ngân hoặc tự quyết định tín dụng.
 
 ## Điều kiện và quyết định cần chốt
 
 Lãi, phí và tổng phải trả chỉ được công bố khi có biểu phí ngân hàng. Chưa có thì hiển thị tình trạng chưa có dữ liệu, không suy ra lãi bằng model.
 
-Ngân hàng/pháp chế cần chốt loại chủ thể vay, hạn mức theo lô hay quay vòng, phạm vi áp dụng trần vay điện tử, biểu phí, hiệu lực CIC, lưu trữ chứng từ và cách xử lý trích thiếu. Các trần trong repo là cấu hình demo, không phải kết luận pháp lý cập nhật.
+Mini dùng hồ sơ theo từng lô, hạn mức quay vòng ngoài phạm vi. Ngân hàng/pháp chế vẫn cần chốt chủ thể vay, phạm vi áp dụng trần vay điện tử, biểu phí, hiệu lực CIC, lưu trữ chứng từ và cách xử lý trích thiếu. Các trần trong repo là cấu hình demo, không phải kết luận pháp lý cập nhật.
 
 Product cần chốt xử lý doanh thu ngoài sàn của case D. Payout sàn khớp không tự chứng minh nguồn thu ngoài sàn. Ưu tiên hoàn thành luồng A/B/C/E/F trước mở rộng P7.

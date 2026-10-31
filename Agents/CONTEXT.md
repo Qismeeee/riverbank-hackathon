@@ -8,6 +8,8 @@ Số seller xin không phải số mặc định được đề xuất. Gap là 
 
 Riverbank theo mô hình A: LOS với portal ngân hàng. Lõi gồm tiếp nhận, thẩm định, quyết định và bàn giao. Vốn, hợp đồng pháp lý, giải ngân, thu nợ và sổ cái thuộc ngân hàng/core. Mô hình B bàn giao sang LOS khác là phương án tích hợp.
 
+Database mini được người dùng chốt tại [database/riverbank-mini.dbml](../database/riverbank-mini.dbml): một shop/seller record, một application/lô, một quyết định cuối/application. Dùng applications/application_events và UUID, tiền NUMERIC(18,2)/Decimal, tiền trong JSONB là chuỗi decimal. DBML chưa phải migration, các contract còn thiếu được ghi ở DATA/GAPS.
+
 ## Bản đồ thành phần
 
 Các đường dẫn dưới đây xác định cách tổ chức code và trách nhiệm để triển khai.
@@ -32,6 +34,6 @@ Các đường dẫn dưới đây xác định cách tổ chức code và trác
 
 Code tính gap, tiền, kỳ hạn, lịch trích, PD và rule. LLM trích kế hoạch hoặc viết trên evidence đã khóa. Jev xử lý tác vụ phân loại theo phạm vi cho phép. Memo qua validator trước phát hành.
 
-Gap bằng 0 bỏ CIC, PD và toàn bộ rule vay. Quyết định tín dụng luôn do nhân sự ngân hàng thực hiện. Đổi điều khoản tạo version mới, không ghi đè lịch đã dùng.
+Gap bằng 0 bỏ CIC, PD và toàn bộ rule vay. Quyết định tín dụng luôn do nhân sự ngân hàng thực hiện. Mini tạo run mới cho counter trước quyết định, không sửa run COMPLETED hoặc quyết định cuối. Version ACTIVE/SUPERSEDED sau quyết định chỉ thuộc mở rộng P7.
 
 Dữ liệu mô phỏng phải được gắn nhãn. PD train trên synthetic chỉ minh họa cơ chế, không phải xác suất đã kiểm định bằng khoản vay thật. Latency và chi phí là chỉ tiêu cần đo theo TEST_PLAN.

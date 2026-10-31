@@ -1,6 +1,8 @@
 # Tích hợp API và frontend
 
-Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết](API.md) và [FE integration](API.md). Router và schema được tổ chức trong `../api/routers/` và `../api/services/underwriting/models.py`.
+Contract tích hợp cho seller, lender và studio. Database mini theo [DBML](../database/riverbank-mini.dbml) và [DATA](DATA.md). Router/Pydantic là phần cần xây, chưa có file thực thi trong repo.
+
+Route cases được giữ làm tên HTTP. case_id trong path/response map tới applications.application_id (UUID), expected_version map tới applications.version_no. Không có bảng cases riêng. seller_id là UUID, shop được server xác định qua sellers.external_shop_ref. Auth subject phải map tới seller UUID đã xác thực, không lấy role hoặc actor từ body.
 
 ## API lõi
 
@@ -35,8 +37,8 @@ Tạo hồ sơ và quyết định gửi `Idempotency-Key`. Retry cùng thao tá
 
 ```json
 {
-  "seller_id": "demo-b",
-  "shop_id": "demo-b",
+  "seller_id": "00000000-0000-4000-8000-000000000002",
+  "consent_id": "00000000-0000-4000-8000-000000000102",
   "lot_value": 200000000,
   "cash_on_hand": 120000000,
   "supplier_schedule": [{"week": 0, "amount": 200000000}],
@@ -46,11 +48,15 @@ Tạo hồ sơ và quyết định gửi `Idempotency-Key`. Retry cùng thao tá
 }
 ```
 
-Với nguồn demo và cấu hình fixture phù hợp, kết quả nghiệp vụ là chờ duyệt. FE lấy số hiển thị từ response/evidence, không tính lại gap hoặc đưa đề xuất thành đã được duyệt.
+UUID trong ví dụ cần seller/consent demo tương ứng khi seed. Service phải kiểm consent thuộc đúng seller và còn hiệu lực, không chỉ dựa vào FK. Note được guard thành sanitized_note, không lưu raw PII. Với nguồn demo và cấu hình fixture phù hợp, kết quả nghiệp vụ là chờ duyệt. FE lấy số hiển thị từ response/evidence, không tính lại gap hoặc đưa đề xuất thành đã được duyệt.
+
+Ví dụ tiền HTTP hiện giữ số nguyên VND. Trong persistence, tiền cột SQL là Decimal và tiền JSONB là chuỗi decimal. Schema HTTP chính thức, khả năng nhận phần lẻ VND và normalize tiền phải được khóa trước triển khai typed client, không tự đổi toàn bộ public API chỉ vì DB dùng numeric.
 
 ## Quyết định và chứng từ
 
-Decision body gồm `expected_version`, `decision_type`, `reason`, và `verification_note` khi cần. Chỉ `ACCEPT_COUNTER` gửi `final_amount`, `final_tenor_weeks`. Render điều kiện cuối server trả về vì engine có thể giãn kỳ hạn. Sau quyết định đọc version mới trước handoff.
+Decision body gồm expected_version, decision_type, reason và verification_note khi cần. decision_type HTTP map sang cột decisions.decision. Chỉ ACCEPT_COUNTER gửi final_amount/final_tenor_weeks. Counter tạo run mới, chỉ một quyết định cuối được lưu cho một application. Render điều kiện cuối server trả vì engine có thể giãn kỳ hạn. Sau quyết định đọc version mới trước handoff.
+
+Giữ yêu cầu Idempotency-Key cho tạo hồ sơ và quyết định. DBML mới chỉ có key cho run và handoff, nên persistence chống trùng request đầu vào còn phải thiết kế trước khi coi các endpoint này hoàn chỉnh.
 
 Thiếu PD chuyển người xử lý theo policy. Nếu có quy trình xác minh thủ công thay thế, ngân hàng phải xác nhận quy trình đó trước khi áp dụng. Frontend không tự suy ra quyền chấp nhận từ ghi chú hoặc trạng thái.
 

@@ -1,6 +1,8 @@
 # Tham số bản demo của Riverbank.
 # Các giá trị cấu hình dùng để triển khai engine và xây kiểm thử nghiệm thu.
 # Không chép các ngưỡng sang prompt, UI, hay lời văn tờ trình.
+# Persistence mini: database/riverbank-mini.dbml. Tiền NUMERIC(18,2)/Decimal,
+# JSONB dùng chuỗi decimal. Các fixture/ngưỡng VND nguyên bên dưới không đổi.
 schema_version: 2
 currency: VND
 

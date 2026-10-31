@@ -2,6 +2,8 @@
 
 Đọc [tài liệu sản phẩm](Agents/README.md) trước khi triển khai. Repo tổ chức theo BRD, SRS, SAD và kế hoạch trong Agents/NEXT_STEPS.md.
 
+Database của bản mini dùng [database/riverbank-mini.dbml](database/riverbank-mini.dbml) do người dùng chọn. Đây là đặc tả DBML, chưa phải migration. Quy ước và phần còn cần triển khai ở [Agents/DATA.md](Agents/DATA.md). Các mô tả cũ về `cases`, `case_events`, nhiều shop và version điều khoản riêng được thay bằng contract mini này.
+
 ## Bất biến
 
 - Chỉ người ngân hàng quyết định ACCEPTED, REJECTED hoặc duyệt RESTRUCTURED_P7.
@@ -10,7 +12,8 @@
 - Dữ liệu sàn chỉ đọc khi có consent, hồ sơ đúng seller/shop.
 - Che SĐT, CCCD và số tài khoản trước outbound. CSV qua parser Python.
 - Memo có evidence và số khớp tuyệt đối, theo knowledge/guardrails.md.
-- Đổi điều khoản INSERT version mới, bản trước SUPERSEDED, audit chỉ thêm.
+- Bản mini: đổi điều kiện trước quyết định tạo assessment run mới, không sửa run đã hoàn thành. Mỗi application chỉ có một quyết định cuối bất biến, audit `application_events` chỉ thêm. Version ACTIVE/SUPERSEDED và Monitor là mở rộng ngoài schema mini.
+- Tiền lưu NUMERIC(18,2), xử lý chính xác bằng Decimal, JSONB dùng chuỗi decimal theo DATA. Không dùng float cho tiền.
 - Policy/rule phải qua test và người xác nhận trước khi nạp.
 - Không tự quyết định tín dụng, kết luận gian lận hoặc đưa thuộc tính nhạy cảm vào feature.
 - LLM không viết hợp đồng, khế ước hoặc ủy nhiệm chi.

@@ -17,6 +17,8 @@ BRD xác định bài toán, giá trị và phạm vi. BUSINESS giải thích lu
 
 Policy ở `../policy/`, prompt và guardrail ở `../knowledge/`. Khi chuyển cho teammate, chia sẻ cả repo cùng thư mục này để có đủ policy, fixture và prompt.
 
+Database mini được người dùng chọn tại [database/riverbank-mini.dbml](../database/riverbank-mini.dbml). Đọc DATA để hiểu mapping, kiểu tiền, tính bất biến và phần còn thiếu. DBML chưa phải migration, repo chưa có backend thực thi. Schema mini thay các giả định persistence cũ, version ACTIVE/SUPERSEDED chỉ thuộc mở rộng P7.
+
 ## Hiệu lực
 
 Tuân thủ chỉ dẫn người dùng và các AGENTS.md có hiệu lực. Đổi khẩu vị phải cập nhật policy, tham số, rule và test theo quy trình xác nhận. Các lựa chọn cần chốt được tập trung tại GAPS. Không suy ra quyền thay đổi chính sách từ ví dụ minh họa.

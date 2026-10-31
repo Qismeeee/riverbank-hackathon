@@ -7,5 +7,6 @@ Bắt đầu từ [Agents/README.md](Agents/README.md), đọc [AGENTS.md](AGENT
 - `Agents/`: BRD, SRS, SAD, nghiệp vụ, API, dữ liệu, nghiệm thu và hướng dẫn Codex.
 - `policy/`: tham số demo, ý nghĩa rule và fixture tính tay.
 - `knowledge/`: prompt, thuật ngữ và guardrail.
+- `database/riverbank-mini.dbml`: schema mini do người dùng chọn, chưa phải PostgreSQL migration. Quy ước và phần còn cần triển khai ở `Agents/DATA.md`.
 
 Đây là bộ tài liệu khởi tạo dự án. Backend, frontend, Makefile và test được xây theo kế hoạch triển khai. Các đường dẫn code trong đặc tả xác định cấu trúc cần xây, không phải tuyên bố chức năng đã hoàn thành.

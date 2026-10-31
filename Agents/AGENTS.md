@@ -5,12 +5,12 @@
 ## Bất biến phải giữ
 
 - Chỉ nhân sự ngân hàng quyết định `ACCEPTED`, `REJECTED` hoặc duyệt version `RESTRUCTURED_P7`. Không tự duyệt, tự từ chối, tự giãn nợ.
-- Gap, tiền VND, kỳ hạn, lịch trích, PD và pass/fail rule do code tính. Tiền dùng `int`. LLM chỉ trích dữ kiện hoặc viết trên số đã khóa.
+- Gap, tiền VND, kỳ hạn, lịch trích, PD và pass/fail rule do code tính. Tiền theo DBML mini: NUMERIC(18,2), Decimal và chuỗi decimal trong JSONB, không float. LLM chỉ trích dữ kiện hoặc viết trên số đã khóa.
 - Gap bằng 0 thì không CIC, không PD, không rule vay. Bỏ qua toàn bộ R01 đến R10.
 - Chưa consent thì không đọc dữ liệu sàn. Mọi snapshot, CIC, evidence và quyền truy cập phải đúng seller/shop.
 - Che SĐT, CCCD và tài khoản trước khi chữ tự do ra khỏi server. CSV dùng parser Python. PDF có chữ ưu tiên parser, ảnh/scan mới OCR.
 - Tờ trình chính thức có evidence hợp lệ và số khớp tuyệt đối. Theo danh sách từ cấm tại `../knowledge/guardrails.md`.
-- Đổi tiền, kỳ hạn hoặc lịch trả phải thêm version, bản trước thành `SUPERSEDED`. `case_events` chỉ thêm.
+- Theo schema mini người dùng đã chọn, counter tạo assessment run mới, không sửa run đã hoàn thành. Mỗi application chỉ có một quyết định cuối bất biến. `application_events` chỉ thêm. Lifecycle ACTIVE/SUPERSEDED chỉ thuộc mở rộng P7, chưa có bảng trong mini.
 - LLM không viết hợp đồng, khế ước hay ủy nhiệm chi. Không kết luận gian lận hoặc dùng thuộc tính nhạy cảm làm feature.
 - Đổi policy phải có policy văn bản, tham số, rule, test và xác nhận của người theo chỉ dẫn cấp trên. Engine phải từ chối nạp bộ chưa đáp ứng quy trình này.
 

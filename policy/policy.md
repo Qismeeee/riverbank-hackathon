@@ -27,7 +27,7 @@ Thứ tự: R09, R01, R04, R08, R02, R03, R05, R06, R07, R10. Rule cứng thiế
 
 Gap bằng 0 dừng trước PD, CIC và rule vay. Có gap thì chấm PD, tra CIC có điều kiện qua adapter ngân hàng và chạy policy. Chỉ thiếu chứng từ R05 thì chờ sao kê. Hard fail hoặc sao kê lệch thì chuyển người. Rule mềm fail chỉ cảnh báo. Không tự duyệt hoặc tự từ chối.
 
-Người ngân hàng quyết định, không ghi đè hard fail bằng ghi chú. Counter phải chạy lại lịch, PD và rule. Đổi điều khoản INSERT version mới, bản trước SUPERSEDED. Audit chỉ thêm.
+Người ngân hàng quyết định, không ghi đè hard fail bằng ghi chú. Theo [database mini](../database/riverbank-mini.dbml), counter tạo assessment run mới và chạy lại lịch, PD, toàn bộ rule trước khi lưu một quyết định cuối bất biến. Không sửa run COMPLETED. Audit application_events chỉ thêm. Lifecycle điều khoản ACTIVE/SUPERSEDED thuộc mở rộng ngoài mini.
 
 ## Ranh giới pháp lý
 

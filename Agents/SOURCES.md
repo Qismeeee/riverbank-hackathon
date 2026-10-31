@@ -6,6 +6,7 @@
 | Nghiệp vụ | [BRD](BRD.md), [BUSINESS](BUSINESS.md) |
 | Yêu cầu và nghiệm thu | [SRS](SRS.md), [TEST_PLAN](TEST_PLAN.md) |
 | Thiết kế và tích hợp | [SAD](SAD.md), [API](API.md), [DATA](DATA.md) |
+| Database mini đã chọn | [DBML nguyên bản do người dùng cung cấp](../database/riverbank-mini.dbml), [quy ước và giới hạn](DATA.md) |
 | Quyết định và triển khai | [GAPS](GAPS.md), [NEXT_STEPS](NEXT_STEPS.md), [HANDOFF](HANDOFF.md) |
 | Policy | [Ý nghĩa rule](../policy/policy.md), [tham số](../policy/parameters.yaml), [ví dụ](../policy/worked-examples.md) |
 | Model và guardrail | [Knowledge](../knowledge/README.md), [thuật ngữ](../knowledge/glossary.md), [guardrails](../knowledge/guardrails.md) |

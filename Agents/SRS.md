@@ -1,6 +1,6 @@
 # Đặc tả yêu cầu phần mềm
 
-Nguồn đầy đủ: [SRS gốc](SRS.md). Bảng này giữ nhóm ID để teammate truy vết, không đánh lại FR.
+Bảng này giữ nhóm ID để teammate truy vết, không đánh lại FR. Database mini theo [DBML do người dùng chọn](../database/riverbank-mini.dbml) và [DATA](DATA.md). Các đường dẫn implementation/test dưới đây là vị trí dự kiến, chưa có code thực thi.
 
 ## Yêu cầu và truy vết triển khai
 
@@ -20,13 +20,17 @@ Nguồn đầy đủ: [SRS gốc](SRS.md). Bảng này giữ nhóm ID để team
 | FR-31b hết hiệu lực | Chặn handoff quá hạn, đích đến cần thẩm định lại | `api/services/underwriting/service.py` và luồng tái thẩm định | `api/tests/test_underwriting.py`, task EXP-01 |
 | FR-32..34 sửa điều kiện | Tính lại PD/rule/lịch, không chấp nhận gap 0 hoặc hard fail | `api/services/underwriting/service.py` | `api/tests/test_underwriting.py`, `test_underwriting_risk.py` |
 | FR-35..37 bàn giao | Gói đúng quyết định, retry không mất quyết định, không gọi tiền core | `api/services/underwriting/service.py`, `sources.py` | `api/tests/test_underwriting.py` |
-| FR-38 audit | Event thêm mới có actor, thời gian, evidence | `api/services/underwriting/repository.py`, `api/db/migrations/001_underwriting.sql` | `api/tests/test_underwriting_postgres.py` |
+| FR-38 audit | application_events chỉ thêm, có actor/time/evidence, commit cùng thay đổi hồ sơ | Repository và migration sẽ sinh từ `database/riverbank-mini.dbml` | `api/tests/test_underwriting_postgres.py` |
 
 ## Yêu cầu bổ sung từ chỉ dẫn dự án
 
 Thiếu PD phải chuyển người. Quy trình xác minh thủ công thay thế, nếu có, phải được ngân hàng xác nhận trong policy trước khi triển khai. Xem quyết định cần chốt tại GAPS.
 
-Version điều khoản là thực thể riêng với lịch sử bất biến. Thay tiền/kỳ hạn/lịch trả phải INSERT bản mới và đánh dấu bản cũ `SUPERSEDED`. Assessment run lưu kết quả thẩm định, còn `cases.version` dùng khóa ghi. Hai khái niệm này tách biệt với version điều khoản.
+Theo schema mini người dùng chọn, mỗi application chỉ có một quyết định cuối bất biến. Trước quyết định, counter tạo assessment run mới, tính lại lịch/PD/policy và không sửa run đã COMPLETED. Điều kiện cuối lưu trong decisions.final_cashflow_result và các cột final_amount/final_tenor_weeks. Không tạo bảng version điều khoản riêng hoặc ACTIVE/SUPERSEDED trong mini. P7 cần schema mở rộng riêng.
+
+applications.version_no dùng khóa ghi, khác run_no. Public case_id ánh xạ application_id. Kế hoạch bất biến sau submit, kế hoạch mới cần application mới. Mỗi seller UUID ứng với một external_shop_ref. Tiền NUMERIC(18,2)/Decimal, JSONB dùng chuỗi decimal, định dạng tiền HTTP và phần lẻ VND còn cần khóa trước engine.
+
+Enum DBML có DRAFT/BLOCKED_INPUT/ANALYZING/VERIFYING/WITHDRAWN. Chưa có bảng chuyển state đầy đủ nên không tự suy ra quyền thao tác từ enum. Gap 0 vẫn không được cấp vay. Accept chỉ dùng run COMPLETED và generated document PASSED cùng application, không có ANALYZING → ACCEPTED.
 
 Chữ tự do phải được che PII tại server trước mọi outbound model call. Kiểm tra riêng đường tạo case và Copilot vì hành vi chặn/làm sạch khác nhau. CSV không đi vision. Chấm phân loại sao kê qua Jev, tổng tiền bằng Python.
 
