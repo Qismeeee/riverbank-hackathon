@@ -1,5 +1,9 @@
-# Tham số bản demo của Riverbank.
-# Các giá trị cấu hình dùng để triển khai engine và xây kiểm thử nghiệm thu.
+# Tham số chính sách của Riverbank.
+# File này là nguồn tham số quy phạm; code sinh ra và test parity phải khớp các giá trị này:
+#   CashFlowConfig  api/services/cashflow.py
+#   PolicyConfig    api/policy/engine.py
+#   Plan            api/services/underwriting/models.py
+# api/tests/test_golden.py phải kiểm từng số dưới đây khớp code sinh ra. Đổi ngưỡng thì sinh lại rule, chạy test và xin xác nhận.
 # Không chép các ngưỡng sang prompt, UI, hay lời văn tờ trình.
 schema_version: 2
 currency: VND
@@ -19,7 +23,7 @@ cashflow:
   max_tenor_weeks: 26
   # BL-04, R08. Trần trích = int(payout_stress * deduction_cap_ratio).
   deduction_cap_ratio: 0.25
-  # Tuần 0 là tuần nhập hàng, payout của lô bắt đầu từ tuần này.
+  # Tuần 0 là tuần nhập hàng và chưa có payout; payout bắt đầu từ tuần 1.
   payout_start_week: 1
   # Số tuần cộng thêm sau max(sell_weeks, tuần chi cuối + 1) khi dựng bảng dòng tiền.
   extra_weeks: 2
@@ -30,7 +34,7 @@ cashflow:
   weekly_deduction_rounding: ceil_vnd
 
 policy:
-  # R01. Hạn mức tuyệt đối của bộ demo, so với số đề xuất.
+  # R01. Hạn mức tuyệt đối, so với số đề xuất.
   max_amount_vnd: 300000000
   # R02. Fail khi shop_age_months < min.
   min_shop_age_months: 6
@@ -77,7 +81,7 @@ decision:
   counter_max_tenor_weeks: 26
 
 memo:
-  # BL-07. Lần 1 đến 2 do LLM viết khi bật RIVERBANK_MEMO_WRITER=llm, lần cuối luôn là template. Validator kiểm từng câu với bằng chứng. Lần 3 fail → ESCALATED.
+  # BL-07. Code viết mọi câu từ mẫu câu. Validator kiểm từng câu với bằng chứng và semantic frame. Hết số lần mà vẫn fail → ESCALATED.
   max_attempts: 3
 
 handoff:

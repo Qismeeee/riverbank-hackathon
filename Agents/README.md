@@ -1,6 +1,6 @@
 # Tài liệu sản phẩm Riverbank
 
-Bộ tài liệu nền tảng xác định nghiệp vụ, yêu cầu phần mềm, kiến trúc và quy trình phát triển Riverbank. Teammate và Codex sử dụng bộ này để hiểu sản phẩm và triển khai theo cùng một thiết kế. Ngôn ngữ làm việc là tiếng Việt.
+Bộ tài liệu nền tảng xác định nghiệp vụ, yêu cầu phần mềm, kiến trúc và quy trình phát triển Riverbank. Nội dung đã được đồng bộ từ tài liệu mới nhất của repo Riverbank nguồn, sau đó chuyển thành đặc tả doc-first cho repo này. Teammate và Codex dùng bộ này làm điểm vào; không suy ra một chức năng đã tồn tại chỉ từ đường dẫn triển khai dự kiến.
 
 ## Thứ tự đọc
 
@@ -15,7 +15,7 @@ Bộ tài liệu nền tảng xác định nghiệp vụ, yêu cầu phần mề
 
 BRD xác định bài toán, giá trị và phạm vi. BUSINESS giải thích luồng và quy tắc. SRS quy định hành vi cần nghiệm thu. SAD mô tả thiết kế kỹ thuật. API và DATA xác định contract giữa các thành phần. Các đường dẫn code/test chỉ ra vị trí tổ chức triển khai, không phải tuyên bố chức năng đã hoàn thành.
 
-Policy ở `../policy/`, prompt và guardrail ở `../knowledge/`. Khi chuyển cho teammate, chia sẻ cả repo cùng thư mục này để có đủ policy, fixture và prompt.
+Policy ở `../policy/`, prompt và guardrail ở `../knowledge/`. Tờ trình D09/D10 do code ghép từ evidence và semantic frame; không có prompt Memo Writer runtime. Khi chuyển cho teammate, chia sẻ cả repo để có đủ policy, fixture và prompt.
 
 ## Hiệu lực
 

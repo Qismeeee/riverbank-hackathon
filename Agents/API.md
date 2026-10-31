@@ -1,6 +1,6 @@
 # Tích hợp API và frontend
 
-Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết](API.md) và [FE integration](API.md). Router và schema được tổ chức trong `../api/routers/` và `../api/services/underwriting/models.py`.
+Contract tích hợp cho seller, lender và studio. Bảng này là target contract doc-first; chỉ đánh dấu một endpoint đã có khi code và test tương ứng nằm trong repo.
 
 ## API lõi
 
@@ -17,17 +17,22 @@ Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết]
 | GET | `/v1/cases/{case_id}/evidence/{evidence_id}` | Underwriter |
 | POST | `/v1/cases/{case_id}/statements` | Underwriter nhập tổng |
 | POST | `/v1/cases/{case_id}/statements/upload` | Seller của hồ sơ hoặc underwriter |
+| POST | `/v1/cases/{case_id}/statements/upload-jobs` | Validate sơ bộ rồi trả job `202` |
+| GET | `/v1/jobs/{job_id}` | Seller của hồ sơ hoặc underwriter xem job |
+| GET | `/v1/cases/{case_id}/statements/original` | Tải file gốc theo quyền và retention |
+| GET | `/v1/cases/{case_id}/statements/reading` | Tải kết quả đọc/chuẩn hóa |
 | POST | `/v1/cases/{case_id}/cic-inquiry` | Underwriter, điều kiện theo service |
 | POST | `/v1/cases/{case_id}/decisions` | Underwriter |
 | POST | `/v1/cases/{case_id}/handoff` | Underwriter |
 | GET | `/v1/studio/policy` | Underwriter |
 | GET | `/v1/studio/eval-metrics` | Underwriter |
+| GET | `/v1/studio/traffic` | Underwriter, latency/cost/call count đã sanitize |
 
 Các API mở rộng gồm `copilot/ask`, `webhooks/los-status`, `simulate-p7-event`, `restructure-decision`. Chỉ đưa vào luồng frontend sau khi có contract, xác thực và kiểm thử tương ứng.
 
 ## Quy ước client
 
-Prod theo thiết kế dùng Bearer token. Header role chỉ phục vụ mode local phù hợp. Không đặt passcode/signing key trong source FE. Token hết hạn đưa về đăng nhập. Seller đọc seller-view, không dùng chi tiết nội bộ để ẩn dữ liệu bằng CSS.
+Prod theo thiết kế dùng Bearer token. `subject` phải có trong UserDirectory với đúng role; với seller, subject chính là `seller_id`. Header role chỉ phục vụ mode local phù hợp. Không đặt passcode/signing key trong source FE. Token hết hạn đưa về đăng nhập. Seller đọc seller-view, không dùng chi tiết nội bộ để ẩn dữ liệu bằng CSS.
 
 Tạo hồ sơ và quyết định gửi `Idempotency-Key`. Retry cùng thao tác giữ nguyên key và payload. Thao tác mới tạo key mới. Lệnh thay đổi hồ sơ gửi `expected_version` mới nhất theo schema, riêng tạo case chưa có version. Gặp conflict đọc lại và để người dùng xác nhận trên dữ liệu mới.
 
@@ -35,8 +40,8 @@ Tạo hồ sơ và quyết định gửi `Idempotency-Key`. Retry cùng thao tá
 
 ```json
 {
-  "seller_id": "demo-b",
-  "shop_id": "demo-b",
+  "seller_id": "minhchau.shop",
+  "shop_id": "minhchau.shop",
   "lot_value": 200000000,
   "cash_on_hand": 120000000,
   "supplier_schedule": [{"week": 0, "amount": 200000000}],
@@ -54,7 +59,11 @@ Decision body gồm `expected_version`, `decision_type`, `reason`, và `verifica
 
 Thiếu PD chuyển người xử lý theo policy. Nếu có quy trình xác minh thủ công thay thế, ngân hàng phải xác nhận quy trình đó trước khi áp dụng. Frontend không tự suy ra quyền chấp nhận từ ghi chú hoặc trạng thái.
 
-Upload sao kê dùng multipart với `expected_version`, `period_start`, `period_end`, `file`. Đối chiếu cùng kỳ, xử lý lỗi đọc/OCR/classifier riêng. API nhập tổng thủ công phải ghi nguồn và người nhập, phân biệt với dữ liệu bóc từ file.
+Upload sao kê dùng multipart với `expected_version`, `period_start`, `period_end`, `file`. FE nên dùng endpoint job cho PDF/ảnh hoặc tài liệu chậm, poll `GET /v1/jobs/{job_id}` đến `SUCCEEDED`/`FAILED`; endpoint đồng bộ vẫn phù hợp cho CSV/Excel nhỏ. Job validate quyền, version, kỳ, size và MIME trước khi xếp hàng. Đối chiếu cùng kỳ, xử lý lỗi parser/OCR/classifier riêng. API nhập tổng thủ công phải ghi nguồn và người nhập.
+
+Khi hồ sơ chỉ thiếu R05, response CIC dùng `source: deferred_until_statement`, `gate: null`; không hiển thị như lỗi CIC. Sau sao kê service mới chạy gate/CIC. Tra thủ công của underwriter phải có reason, actor và audit.
+
+`GET /v1/queue` không có filter chỉ trả hồ sơ chưa quyết định: `PENDING_REVIEW`, `ESCALATED`, `NO_LOAN_NEEDED`, `AWAITING_STATEMENT`. Muốn xem `ACCEPTED` hoặc `REJECTED` phải truyền filter rõ.
 
 ## Lỗi cần xử lý
 

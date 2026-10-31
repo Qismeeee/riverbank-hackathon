@@ -18,6 +18,7 @@ make test
 | A gap 0 | Không CIC, không PD, không policy vay, không quyết định cấp vay |
 | B có gap | Đúng golden, chờ người duyệt, evidence đầy đủ |
 | C vượt mức sàn | Chờ sao kê khi chỉ thiếu R05, lệch thì chuyển người |
+| C trước/sau sao kê | Trước: CIC `deferred_until_statement`; sau: gate/CIC chỉ chạy một lần và policy được đánh giá lại |
 | E hard fail | Chuyển người, ghi chú không bypass hard fail |
 | R10 thiếu PD | Chuyển người và chặn chấp nhận khi policy chưa cho phép quy trình thay thế, phân biệt với PD vượt trần |
 | F injection/PII | Chặn hoặc làm sạch theo đường vào, không lọt chữ gốc ra model |
@@ -30,14 +31,26 @@ make test
 | LOS lỗi/retry | Quyết định giữ nguyên, retry không tạo bàn giao trùng |
 | Quyết định hết hạn | Handoff bị chặn, hướng dẫn tái thẩm định |
 | CSV/PDF/ảnh | CSV parser, PDF chữ parser, scan/ảnh OCR có điều kiện và lỗi rõ |
+| Job sao kê | `202` có Location, lease hết hạn nhận lại, 5xx retry, 4xx dừng, không tạo E8 trùng |
+| Event outbox | Rollback không publish, Kafka down để pending, retry có thể duplicate và consumer deduplicate |
+| ModelGate | Cap song song/rate/circuit đúng provider, token lease an toàn, Memory/Valkey parity, store lỗi fail open |
+| Named users | Subject lạ/role sai bị 401, seller không mạo danh seller_id, actor audit đúng |
+| Code memo | Chủ thể, quan hệ, vai trò số, đơn vị và evidence khớp; không có model call |
 
 ## Tệp test theo mảng
 
 - Engine/policy: `api/tests/test_cashflow.py`, `test_rules.py`, `test_golden.py`.
 - Workflow/permission: `test_underwriting.py`, `test_auth.py`, `test_underwriting_shopee.py`.
-- AI/evidence: `test_copilot.py`, `test_memo.py`, `test_statements.py`, `test_underwriting_gates.py`.
+- AI/evidence: `test_copilot.py`, `test_memo.py`, `test_statements.py`, `test_underwriting_gates.py`, `test_modelgate.py`.
+- Hạ tầng workflow: `test_jobs.py`, `test_events.py`, test consumer idempotency và named directory.
 - PD: `test_features.py`, `test_risk.py`, `test_underwriting_risk.py`.
 - DB: `test_underwriting_postgres.py`, kiểm tra điều kiện skip trước khi kết luận persistence đạt.
+
+## Copilot extract-plan
+
+Bộ ca EP phải khóa ít nhất: FX-B sẵn sàng; cọc 50% tuần 0/trả nốt tuần 4; thiếu giá trị lô; số viết bằng chữ không được model tự tạo; phân biệt `150tr` với 150 tuần; lịch không cân; tuần chi vượt `sell_weeks`; requested amount vượt trần nhưng không bị hạ số; PII được che; injection/thuộc tính nhạy cảm bị chặn; seller/role sai bị 403; message rỗng hoặc quá dài bị 422.
+
+Giá trị tiền khác `null` phải có trong `sanitized_message` sau chuẩn hóa đơn vị. `ready=true` chỉ khi đủ năm trường và `issues` rỗng. Số vượt trần được giữ nguyên để báo lỗi, không tự kéo về trần. UI chỉ hiện thẻ kế hoạch khi draft sẵn sàng; đường form không chat không được gọi extract-plan.
 
 Sau thay engine/rule, đối chiếu `policy/worked-examples.md`, parameter parity và golden qua service thật. Chỉ cập nhật golden khi hành vi mới được chốt, không sửa expected để che regression. `make eval-report` ghi lại báo cáo Studio nên chạy khi task cần cập nhật artifact đó.
 

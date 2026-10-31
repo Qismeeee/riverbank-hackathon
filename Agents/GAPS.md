@@ -14,8 +14,12 @@ Các quyết định dưới đây cần được chốt trước khi triển kh
 | Case D | Xác minh doanh thu ngoài sàn bằng nguồn nào? | Nghiệp vụ và rủi ro | Khớp payout sàn không chứng minh thu ngoài sàn |
 | Trích thiếu | Thời gian xử lý, quá hạn và điều kiện đề xuất cơ cấu? | Ngân hàng và rủi ro | P7/P8 và tích hợp core |
 | Chứng từ | Lưu file gốc ở đâu, ai đọc, trong bao lâu? | Ngân hàng và pháp chế | Object storage, quyền đọc và retention |
+| Job sao kê | Lease, retry, file tạm và retention theo môi trường? | Backend và security | Không xử lý trùng, không lưu file quá hạn |
+| Case event | Topic/retention, consumer owner và DLQ có cần không? | Platform và các consumer | Outbox, Kafka ACL, idempotency và quan sát |
+| Model budget | Limit theo provider, timeout, circuit threshold và cách đo cost? | Tech lead và risk | ModelGate/Valkey, fallback và Studio traffic |
+| Named users | Nguồn danh bạ, vòng đời subject và mapping role? | Security và ngân hàng | Token, audit actor và seller isolation |
 | Dữ liệu seller | Seller export hay OpenAPI có ủy quyền? | Đầu mối dữ liệu | Adapter, provenance và consent |
-| Frontend | Vị trí package, môi trường API và auth? | Frontend và tech lead | Luồng seller, lender và studio |
+| Frontend | Source package, môi trường API và auth ở đâu? | Frontend và tech lead | Luồng seller, lender và studio; build artifact không thay source |
 
 ## Nguyên tắc giải quyết
 

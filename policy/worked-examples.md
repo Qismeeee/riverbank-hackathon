@@ -1,6 +1,6 @@
 # Ví dụ tính tay Riverbank
 
-Đặc tả fixture cho CashFlowEngine và PolicyEngine. Ngưỡng theo `parameters.yaml`. Khi triển khai, tạo nhãn trong `eval/golden/` và kiểm qua UnderwritingService.
+Công thức quy phạm cho `CashFlowEngine` và `PolicyEngine`; ngưỡng theo `parameters.yaml`. Khi triển khai, mỗi ví dụ phải có file nhãn trong `eval/golden/`, và `api/tests/test_golden.py` phải chạy chúng qua `UnderwritingService` thật.
 
 Giả định chung khi không nói khác: 12 tuần payout 70.000.000, nên payout cơ sở 70.000.000 và payout xấu `int(70.000.000 × 0,7)` = 49.000.000. Tuần 0 không có payout. Shop 12 tháng tuổi, hoàn 5%, CIC nhóm 1, dư nợ 0, mức sàn hỗ trợ 120.000.000.
 
@@ -22,7 +22,7 @@ Giả định chung khi không nói khác: 12 tuần payout 70.000.000, nên pay
 - Số xin 150.000.000 không thành số đề xuất.
 - R05: `max(150.000.000, 90.000.000)` = 150.000.000 ≤ `2,5 × 120.000.000` = 300.000.000 → không đòi sao kê.
 - R09: 90.000.000 ≤ 100.000.000. Mọi rule đạt → `PENDING_REVIEW`.
-- PD: fixture dùng giá trị cố định 500 bps để kiểm luồng, tách biệt kiểm định model.
+- PD: bộ golden dùng `BaselineRiskModel` 500 bps để số không đổi theo model. Prod chấm bằng LightGBM.
 
 ## FX-A Không thiếu tiền
 
@@ -43,7 +43,7 @@ Số dư cuối tuần 0 đến 4: 20, 90, 160, 230, 200 triệu. Không tuần 
 - Người thẩm định nhập tổng tiền sàn trên sao kê cho 4 tuần gần nhất. Payout sàn 4 tuần = 280.000.000, ngưỡng lệch 15% = 42.000.000.
   - Sao kê ghi 480.000.000: lệch 200.000.000 > 42.000.000 → R05 fail → `ESCALATED`, lý do `HARD_POLICY_FAILURE`. Lời văn: không khớp, cần xác minh.
   - Sao kê ghi 300.000.000: lệch 20.000.000 ≤ 42.000.000 → R05 đạt → `PENDING_REVIEW`.
-- Mốc bằng nhau: xin 300.000.000 với mức sàn 120.000.000 thì `300.000.000 = 2,5 × 120.000.000`, không đòi sao kê, hồ sơ `PENDING_REVIEW`.
+- Mốc bằng nhau: xin 300.000.000 với mức sàn 120.000.000 thì `300.000.000 = 2,5 × 120.000.000`, code **không** đòi sao kê, hồ sơ `PENDING_REVIEW`. Muốn đòi sao kê ở đúng mốc thì phải đổi `<=` thành `<` trong `r05_docs_when_over_platform`.
 
 ## FX-E Rule cứng chuyển người, rule mềm chỉ cảnh báo
 
@@ -73,10 +73,9 @@ Vết kỳ hạn của biến thể vốn 50.000.000: số dư tuần 0 âm 150,
 
 ## Duyệt số khác
 
-Trên FX-B, người duyệt `ACCEPT_COUNTER` 80.000.000 trong 4 tuần. Trích `ceil(80.000.000 / 4)` = 20.000.000 > 12.250.000 → 6 tuần 13.333.334, vẫn vượt → 8 tuần 10.000.000. Chấm lại PD, chạy lại mười rule đều đạt → `ACCEPTED` với 80.000.000, 8 tuần, 10.000.000 mỗi tuần. Test ở `api/tests/test_underwriting.py`.
+Trên FX-B, người duyệt `ACCEPT_COUNTER` 80.000.000 trong 4 tuần. Trích `ceil(80.000.000 / 4)` = 20.000.000 > 12.250.000 → 6 tuần 13.333.334, vẫn vượt → 8 tuần 10.000.000. Chấm lại PD, chạy lại mười rule đều đạt → `ACCEPTED` với 80.000.000, 8 tuần, 10.000.000 mỗi tuần. Implementation phải khóa ca này trong `api/tests/test_underwriting.py`.
 
-## Mở rộng
+## Chưa có code, nhãn để ở `eval/golden/planned/`
 
-FX-D: phần thu ngoài sàn cần nguồn xác minh riêng, không được suy ra từ tổng payout sàn khớp.
-
-FX-L: Monitor chỉ đề xuất phương án mới, lịch ACTIVE giữ nguyên đến khi người ngân hàng duyệt. Fixture chi tiết cần chốt theo policy giám sát.
+- **FX-D** tiền ngoài sàn: dòng sàn khớp nhưng phần vượt mức chỉ giải thích bằng tiền ngoài sàn → `ESCALATED`, `R06_OFF_PLATFORM_NOT_EVIDENCE`. Code hiện chỉ so tổng tiền sàn, nên trường hợp này đang đi `PENDING_REVIEW`.
+- **FX-L** giám sát sau giải ngân: kỳ đang trích 12.000.000 (nhãn cũ trong file), payout tuần tụt còn 42.000.000, trần mới 10.500.000 → R08 fail, đề xuất giãn nợ D22. Chưa có Monitor.

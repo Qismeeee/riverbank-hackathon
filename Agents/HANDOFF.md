@@ -13,6 +13,7 @@ Kiểm tra môi trường, cấu trúc repo và thay đổi sẵn có trước k
 Giữ người ngân hàng quyết định, code tính số, gap 0 bỏ CIC/PD/rule vay,
 consent và scope đúng seller, PII được che trước outbound.
 Memo phải đúng evidence, điều khoản thêm version mới, audit chỉ thêm.
+Tờ trình D09/D10 do code tạo; model call qua ModelGate; case event qua transactional outbox.
 ```
 
 ## Prompt triển khai một task
@@ -21,6 +22,7 @@ Memo phải đúng evidence, điều khoản thêm version mới, audit chỉ th
 Thực hiện task [TASK_ID] trong Agents/NEXT_STEPS.md đến khi đạt acceptance criteria.
 Đọc AGENTS.md và kiểm tra skill có sẵn đúng phạm vi trước khi sửa.
 Dùng SRS để xác định hành vi, SAD/API/DATA để triển khai contract.
+Nếu task chạm model, job hoặc event, đọc thêm contract ModelGate, job lease và outbox trong các tài liệu này.
 Giữ thay đổi sẵn có của người khác, chia công việc thành thay đổi nhỏ có thể review.
 Triển khai và kiểm thử phù hợp, chạy make test trước khi báo sẵn sàng PR.
 Nếu thiếu môi trường hoặc quyết định nghiệp vụ, nêu rõ phần bị phụ thuộc.

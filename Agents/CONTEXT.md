@@ -18,9 +18,13 @@ Các đường dẫn dưới đây xác định cách tổ chức code và trác
 | `api/routers/` | Auth, underwriting, copilot, studio |
 | `api/services/cashflow.py` | Dòng tiền tuần, gap, đề xuất và lịch counter |
 | `api/policy/` | PolicyConfig, engine và R01 đến R10 |
-| `api/services/underwriting/` | Workflow, repository, evidence, memo và adapter |
+| `api/services/underwriting/` | Workflow, repository, evidence, memo code, CIC và adapter |
 | `api/services/guard.py`, `guardrail.py` | Guard đầu vào và đầu ra |
 | `api/services/copilot/`, `statements/` | Trích kế hoạch và đọc sao kê |
+| `api/services/jobs.py` | Hàng đợi job nền, lease và retry upload sao kê |
+| `api/services/modelgate.py`, `api/kv/` | Ngân sách model, circuit breaker và state Memory/Valkey |
+| `api/services/events.py`, `api/messaging/` | Transactional outbox và relay case event sang Kafka |
+| `api/services/directory.py` | Danh bạo subject/role cho token và auth context |
 | `api/services/features.py`, `risk.py`, `api/models/` | Feature dùng chung train/serving và PD |
 | `api/services/shopee/`, `api/etl/` | Nguồn seller và pipeline dữ liệu |
 | `api/db/`, `infra/` | Schema, migration và triển khai |
@@ -30,7 +34,7 @@ Các đường dẫn dưới đây xác định cách tổ chức code và trác
 
 ## Ranh giới tính toán và model
 
-Code tính gap, tiền, kỳ hạn, lịch trích, PD và rule. LLM trích kế hoạch hoặc viết trên evidence đã khóa. Jev xử lý tác vụ phân loại theo phạm vi cho phép. Memo qua validator trước phát hành.
+Code tính gap, tiền, kỳ hạn, lịch trích, PD và rule. LLM trích kế hoạch, hỏi đáp trên facts đã khóa hoặc OCR ảnh. Jev xử lý gate và phân loại trong phạm vi cho phép. D09/D10 do code tạo từ evidence và phải qua validator trước phát hành. Mọi model call outbound đi qua ModelGate; LightGBM nội bộ không đi qua gate.
 
 Gap bằng 0 bỏ CIC, PD và toàn bộ rule vay. Quyết định tín dụng luôn do nhân sự ngân hàng thực hiện. Đổi điều khoản tạo version mới, không ghi đè lịch đã dùng.
 

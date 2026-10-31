@@ -5,7 +5,7 @@
 ## Bất biến
 
 - Chỉ người ngân hàng quyết định ACCEPTED, REJECTED hoặc duyệt RESTRUCTURED_P7.
-- Code tính Gap, tiền, kỳ hạn, lịch trả, PD và pass/fail. LLM không tính hoặc sửa số.
+- Code tính Gap, tiền, kỳ hạn, lịch trả, PD và pass/fail. D09/D10 do code tạo từ evidence và semantic frame. LLM không tính, sửa số hoặc viết memo chính thức.
 - Gap bằng 0 không CIC, không PD, không rule vay.
 - Dữ liệu sàn chỉ đọc khi có consent, hồ sơ đúng seller/shop.
 - Che SĐT, CCCD và số tài khoản trước outbound. CSV qua parser Python.
@@ -14,6 +14,7 @@
 - Policy/rule phải qua test và người xác nhận trước khi nạp.
 - Không tự quyết định tín dụng, kết luận gian lận hoặc đưa thuộc tính nhạy cảm vào feature.
 - LLM không viết hợp đồng, khế ước hoặc ủy nhiệm chi.
+- Mọi external model call đi qua ModelGate. Kafka không được chặn underwriting; event ghi transactional outbox và consumer phải idempotent.
 
 ## Quy trình
 

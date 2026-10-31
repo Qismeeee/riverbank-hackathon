@@ -1,6 +1,6 @@
 # Đặc tả yêu cầu phần mềm
 
-Nguồn đầy đủ: [SRS gốc](SRS.md). Bảng này giữ nhóm ID để teammate truy vết, không đánh lại FR.
+Bảng này giữ nhóm ID để teammate truy vết từ nghiệp vụ sang contract và test, không đánh lại FR.
 
 ## Yêu cầu và truy vết triển khai
 
@@ -11,16 +11,19 @@ Nguồn đầy đủ: [SRS gốc](SRS.md). Bảng này giữ nhóm ID để team
 | FR-01..04 nhận kế hoạch | Đủ trường, tổng lịch bằng lô, trần hợp lệ, chặn ghi chú độc hại | `api/services/underwriting/models.py`, `service.py` | `api/tests/test_underwriting.py`, `test_copilot.py` |
 | FR-05..07 dữ liệu | Đúng seller/shop, có consent, snapshot/hash truy được | `api/services/underwriting/sources.py`, `shopee_features.py` | `api/tests/test_underwriting_shopee.py` |
 | FR-08..15 dòng tiền | Hai bảng tuần, gap/tiền/lịch tái lập, gap 0 không chạy nhánh vay | `api/services/cashflow.py`, `underwriting/service.py` | `api/tests/test_cashflow.py`, `test_golden.py` |
-| FR-16, FR-16b PD và CIC | PD/factors hợp lệ hoặc chuyển người, CIC chỉ có gap | `api/services/underwriting/risk.py`, `gates.py` | `api/tests/test_underwriting_risk.py`, `test_underwriting_gates.py` |
+| FR-16, FR-16b PD và CIC | PD/factors hợp lệ hoặc chuyển người; gap 0 không CIC; case chờ sao kê hoãn CIC đến sau đối chiếu | `api/services/underwriting/risk.py`, `gates.py`, `cic.py` | `api/tests/test_underwriting_risk.py`, `test_underwriting_gates.py` |
 | FR-17..20 policy | R01..R10 có evidence, cứng fail chặn chấp nhận | `api/policy/`, `api/services/underwriting/service.py` | `api/tests/test_rules.py`, `test_underwriting.py` |
 | FR-18 policy được xác nhận | Chỉ nạp policy đã test và người xác nhận | Loader kiểm hash, kiểm thử và xác nhận của người | Task POL-01 và test loader |
 | FR-21..23 sao kê | Đúng điều kiện R05, đối chiếu cùng kỳ, lệch chuyển người | `api/services/statements/`, `underwriting/service.py` | `api/tests/test_statements.py` |
-| FR-24..28 văn bản | Hai bản cùng evidence, không số mới, không lãi/phí tự tạo | `api/services/underwriting/memo.py`, `api/services/guard.py` | `api/tests/test_memo.py` |
+| FR-24..28 văn bản | Code tạo D09/D10 từ semantic frame và evidence; không số mới, không lãi/phí tự tạo | `api/services/underwriting/memo.py`, `evidence.py`, `api/services/guard.py` | `api/tests/test_memo.py` |
 | FR-29..31 hàng đợi/quyết định | Đúng role, ngân hàng quyết định và có actor | `api/routers/underwriting.py`, `api/routers/auth.py` | `api/tests/test_auth.py`, `test_underwriting.py` |
 | FR-31b hết hiệu lực | Chặn handoff quá hạn, đích đến cần thẩm định lại | `api/services/underwriting/service.py` và luồng tái thẩm định | `api/tests/test_underwriting.py`, task EXP-01 |
 | FR-32..34 sửa điều kiện | Tính lại PD/rule/lịch, không chấp nhận gap 0 hoặc hard fail | `api/services/underwriting/service.py` | `api/tests/test_underwriting.py`, `test_underwriting_risk.py` |
 | FR-35..37 bàn giao | Gói đúng quyết định, retry không mất quyết định, không gọi tiền core | `api/services/underwriting/service.py`, `sources.py` | `api/tests/test_underwriting.py` |
 | FR-38 audit | Event thêm mới có actor, thời gian, evidence | `api/services/underwriting/repository.py`, `api/db/migrations/001_underwriting.sql` | `api/tests/test_underwriting_postgres.py` |
+| FR-38b event delivery | Ghi outbox cùng transaction; Kafka lỗi không làm hỏng thẩm định; relay retry at-least-once | `api/services/events.py`, `api/messaging/`, migration outbox | `api/tests/test_events.py` |
+| FR-22b upload nền | Job có lease, retry 5xx, dừng 4xx, không ghi sao kê hai lần | `api/services/jobs.py`, `underwriting/uploads.py` | `api/tests/test_jobs.py`, `test_statements.py` |
+| NFR model traffic | Mọi OpenAI/OpenRouter/Jev call qua shared gate; LightGBM không qua gate | `api/services/modelgate.py`, `api/kv/` | `api/tests/test_modelgate.py` |
 
 ## Yêu cầu bổ sung từ chỉ dẫn dự án
 

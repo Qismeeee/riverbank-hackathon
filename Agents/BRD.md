@@ -1,6 +1,6 @@
 # Yêu cầu nghiệp vụ Riverbank
 
-Nguồn chi tiết: [BRD gốc](BRD.md). Mã BR và BL được dùng để truy vết nghiệp vụ sang yêu cầu phần mềm. Các quyết định cần chốt nằm tại [GAPS.md](GAPS.md).
+Mã BR và BL được dùng để truy vết nghiệp vụ sang yêu cầu phần mềm. Các quyết định cần chốt nằm tại [GAPS.md](GAPS.md); contract quan sát được nằm tại [SRS.md](SRS.md) và [API.md](API.md).
 
 ## Bài toán và giá trị
 
@@ -20,7 +20,7 @@ Seller phải trả xưởng trước khi nhận payout nên có thể thiếu v
 |---|---|
 | Không tạo nhu cầu vay giả | Case không có tuần âm trả `NO_LOAN_NEEDED` |
 | Đề xuất theo nhu cầu thực | Tiền/kỳ hạn từ CashFlowEngine, không gán số seller xin |
-| Hồ sơ kiểm toán được | Mọi câu có số trỏ evidence, sai lệch 0 đồng |
+| Hồ sơ kiểm toán được | D09/D10 do code tạo; mọi câu có số trỏ evidence, sai lệch 0 đồng |
 | Chứng từ theo điều kiện | R05 quyết định cần sao kê theo ngưỡng policy |
 | Người quyết định | Mọi chấp nhận/từ chối có actor ngân hàng và audit |
 
@@ -31,6 +31,8 @@ BR-01 đến BR-07: nhận kế hoạch một lô, chặn đầu vào, kiểm co
 BR-08 đến BR-15 và BR-21: đề xuất tiền/kỳ hạn, giới hạn kỳ trích, PD, CIC có điều kiện, policy và đối chiếu sao kê.
 
 BR-16 đến BR-20: memo và bản seller cùng evidence, người duyệt, đóng gói bàn giao và nhật ký.
+
+Hạ tầng hỗ trợ phải giữ luồng thẩm định không phụ thuộc Kafka: event được ghi cùng transaction và relay sau commit. Upload sao kê nặng có thể chạy qua job queue. ModelGate giới hạn traffic model mà không thay kết quả code thuần.
 
 P0 định danh thực, P4 hợp đồng, P5 giải ngân, P6 trích tiền, P8 xử lý khoản vay thuộc tích hợp ngân hàng, ngoài phạm vi lõi. P7 là mở rộng đề xuất cơ cấu có người duyệt. Không xây cơ chế tự giải ngân hoặc tự quyết định tín dụng.
 

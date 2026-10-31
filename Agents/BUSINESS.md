@@ -1,6 +1,6 @@
 # Luồng và quy tắc nghiệp vụ
 
-Nguồn: [policy](../policy/policy.md), [tham số](../policy/parameters.yaml), [fixture tính tay](../policy/worked-examples.md), [luồng đầy đủ](BUSINESS.md).
+Nguồn quy phạm: [policy](../policy/policy.md), [tham số](../policy/parameters.yaml) và [fixture tính tay](../policy/worked-examples.md). Contract trạng thái và endpoint nằm trong [SRS.md](SRS.md) và [API.md](API.md).
 
 ## Vòng đời nghiệp vụ
 
@@ -18,7 +18,7 @@ Nguồn: [policy](../policy/policy.md), [tham số](../policy/parameters.yaml), 
 
 ## Luồng thẩm định
 
-Validate kế hoạch và guard đầu vào → consent/scope → snapshot payout → CashFlowEngine. Gap bằng 0 thì dừng nhánh vay, tạo giải thích và ngưỡng cảnh báo. Gap dương thì chấm PD, qua gate CIC, lấy CIC qua adapter, chạy policy và tạo evidence. Định tuyến sang chờ sao kê, chuyển người hoặc chờ duyệt. Memo phải qua validator trước khi phát hành.
+Validate kế hoạch và guard đầu vào → consent/scope → snapshot payout → CashFlowEngine. Gap bằng 0 thì dừng nhánh vay, tạo giải thích và ngưỡng cảnh báo. Gap dương thì chấm PD. Nếu R05 mới chỉ thiếu sao kê, hồ sơ vào `AWAITING_STATEMENT` và CIC gate được hoãn với `deferred_until_statement`. Sau khi đối chiếu sao kê, hoặc khi không cần sao kê, hệ thống qua gate CIC, lấy CIC qua adapter, chạy policy và tạo evidence. D09/D10 do code ghép từ evidence và phải qua validator.
 
 `PENDING_REVIEW` không phải đã được vay. `ESCALATED` không phải bị từ chối. Người duyệt phải xử lý lý do, và không thể dùng ghi chú xác minh để ghi đè rule cứng còn fail.
 
@@ -68,4 +68,4 @@ FX-B: lô 200 triệu, vốn 120 triệu, trả hết tuần 0, payout 70 triệ
 
 FX-A: cùng lô và vốn nhưng trả 100 triệu tuần 0 và 100 triệu tuần 4. Gap 0, cảnh báo payout dưới 20 triệu/tuần. Không gọi CIC hoặc PD.
 
-Case C dùng đúng mức hỗ trợ sàn của fixture hoặc shop demo đang chọn. `demo-c` và worked example không cùng mức hỗ trợ. Case D cần quy trình xác minh thu ngoài sàn. Case L thuộc phạm vi mở rộng Monitor, chỉ kích hoạt version lịch mới sau quyết định của người ngân hàng.
+Case C dùng đúng mức hỗ trợ sàn của fixture hoặc seller profile đang chọn; không trộn mức hỗ trợ giữa hai profile. Dữ liệu demo API dùng subject có tên như `minhchau.shop`, không dùng `demo-b`. Case D cần quy trình xác minh thu ngoài sàn. Case L thuộc phạm vi mở rộng Monitor, chỉ kích hoạt version lịch mới sau quyết định của người ngân hàng.
