@@ -49,7 +49,7 @@ export default function HomePage() {
           </div>
           <div className="hero-visual relative lg:col-span-6">
             <div className="hero-visual-float">
-              <LandingVisual alt={m.home.visualAlt} caption={m.home.sampleNote} />
+              <LandingVisual alt={m.home.visualAlt} caption={m.home.projectionNote} />
             </div>
           </div>
         </section>
@@ -131,8 +131,8 @@ export default function HomePage() {
             </ul>
           </Reveal>
           <Reveal delayMs={140} className="card-lift rounded-2xl border border-white/10 bg-slate-900/70 p-8">
-            <h2 className="text-3xl font-bold tracking-tight text-white">{m.home.demoTitle}</h2>
-            <p className="mt-4 text-lg leading-relaxed text-slate-200">{m.home.demoText}</p>
+            <h2 className="text-3xl font-bold tracking-tight text-white">{m.home.accessTitle}</h2>
+            <p className="mt-4 text-lg leading-relaxed text-slate-200">{m.home.accessText}</p>
             <Link href="/login" className="mt-6 inline-flex cursor-pointer items-center gap-1 text-lg font-semibold text-brand-300 transition-colors duration-200 hover:text-brand-200">
               {m.home.login} <ArrowUpRight className="h-5 w-5" />
             </Link>

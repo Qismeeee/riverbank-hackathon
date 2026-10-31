@@ -26,7 +26,6 @@ export type CaseSummary = {
   version: number;
   reason: string | null;
   created_at: string;
-  demo: boolean;
 };
 
 export type Payment = { week: number; amount: number };
@@ -267,7 +266,6 @@ export type TrafficReport = {
 };
 
 export type EvalReport = {
-  golden_digest: string;
   summary: { total: number; passed: number; failed: number };
   cases: {
     case_id: string;

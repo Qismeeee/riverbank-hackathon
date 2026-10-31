@@ -17,10 +17,10 @@ tailwind.config = {
 };
 
 window.EZX = (() => {
-  const KEY = 'ezx-demo-v1';
+  const KEY = 'ezx-session-v1';
   const listeners = [];
   let lastRev = 0;
-  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ezx-demo') : null;
+  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ezx-sync') : null;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const read = () => {
@@ -162,14 +162,14 @@ window.EZX = (() => {
             </span>
             <span><span class="text-brand-500">ezX</span>Riverbank</span>
           </a>
-          <nav class="flex items-center gap-1" aria-label="Màn hình demo">${nav}</nav>
+          <nav class="flex items-center gap-1" aria-label="Màn hình sản phẩm">${nav}</nav>
           <div class="flex items-center gap-3 text-xs">
             ${right}
             <span class="hidden md:flex items-center gap-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}" title="Các tab Seller và Ngân hàng đồng bộ trạng thái trực tiếp">
               <span class="w-2 h-2 rounded-full bg-emerald-500 ping-soft"></span>Đồng bộ trực tiếp
             </span>
-            <button id="ezx-reset" class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors ${dark ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}" title="Xoá trạng thái demo trên mọi tab">
-              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">Reset demo</span>
+            <button id="ezx-reset" class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors ${dark ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}" title="Xoá trạng thái màn hình trên mọi tab">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">Đặt lại</span>
             </button>
           </div>
         </div>

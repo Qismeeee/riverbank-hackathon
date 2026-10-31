@@ -4,20 +4,20 @@ import { useMemo, useState } from "react";
 import { CircleCheck } from "lucide-react";
 import { CashChart } from "@/components/cash-chart";
 import { useI18n } from "@/lib/i18n";
-import { illustrate, type Sketch } from "@/lib/illustrative";
+import { projectCashflow, type ProjectionInput } from "@/lib/projection";
 
-const PRESETS: Record<string, Sketch> = {
+const PRESETS: Record<string, ProjectionInput> = {
   B: { lot: 200, cash: 120, dep: 1, rem: 4, weeks: 6, payout: 70 },
   A: { lot: 200, cash: 120, dep: 0.5, rem: 4, weeks: 6, payout: 70 },
 };
 
 export function Simulator() {
   const { locale, m } = useI18n();
-  const [plan, setPlan] = useState<Sketch>(PRESETS.B);
-  const result = useMemo(() => illustrate(plan), [plan]);
+  const [plan, setPlan] = useState<ProjectionInput>(PRESETS.B);
+  const result = useMemo(() => projectCashflow(plan), [plan]);
   const million = (value: number) => m.common.million((Math.round(value * 10) / 10).toLocaleString(locale === "zh" ? "zh-CN" : locale === "en" ? "en-GB" : "vi-VN"));
 
-  function set<K extends keyof Sketch>(key: K, value: Sketch[K]) {
+  function set<K extends keyof ProjectionInput>(key: K, value: ProjectionInput[K]) {
     setPlan((current) => ({ ...current, [key]: value }));
   }
 
@@ -69,7 +69,7 @@ export function Simulator() {
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Metric label={m.home.deepest} value={million(result.gap)} tone="text-rose-200" />
-            <Metric label={m.home.sampleProposal} value={million(result.amount)} tone="text-white" />
+            <Metric label={m.home.projectedProposal} value={million(result.amount)} tone="text-white" />
             <Metric label={m.home.repayIn} value={m.common.weeks(result.term)} tone="text-white" hint={m.home.autoDeduct(million(result.weekly))} />
           </div>
         )}

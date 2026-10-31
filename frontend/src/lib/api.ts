@@ -182,7 +182,6 @@ export const api = {
         version: result.version,
         reason: null,
         created_at: current.created_at,
-        demo: false,
       };
     })();
   },

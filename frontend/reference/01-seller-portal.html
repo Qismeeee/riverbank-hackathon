@@ -30,8 +30,8 @@
         </div>
       </div>
       <div class="flex flex-col items-start lg:items-end gap-1.5">
-        <span class="text-[11px] text-slate-400 uppercase tracking-wider">Kịch bản demo</span>
-        <div class="flex flex-wrap bg-white border border-slate-200 rounded-xl p-1 text-sm shadow-card" role="group" aria-label="Kịch bản demo">
+        <span class="text-[11px] text-slate-400 uppercase tracking-wider">Kịch bản nghiệp vụ</span>
+        <div class="flex flex-wrap bg-white border border-slate-200 rounded-xl p-1 text-sm shadow-card" role="group" aria-label="Kịch bản nghiệp vụ">
           <button data-sc="B" class="sc-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"><i data-lucide="trending-down" class="w-4 h-4"></i>Cần vay</button>
           <button data-sc="A" class="sc-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"><i data-lucide="circle-check" class="w-4 h-4"></i>Không cần vay</button>
           <button data-sc="C" class="sc-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"><i data-lucide="file-search" class="w-4 h-4"></i>Xin vượt mức</button>
@@ -182,7 +182,7 @@
       <label class="block text-sm text-slate-700 mt-4">Mã OTP gửi tới số ***678</label>
       <div id="otp-boxes" class="flex gap-2 mt-2"></div>
       <div class="flex gap-2 mt-5">
-        <button id="otp-fill" class="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm cursor-pointer">Điền OTP demo</button>
+        <button id="otp-fill" class="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm cursor-pointer">Điền OTP</button>
         <button id="otp-ok" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-2.5 text-sm font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" disabled>Ký và nhận tiền</button>
       </div>
     </div>
@@ -553,7 +553,7 @@
       $('wi-reset').classList.toggle('hidden', !state.wi);
     }
 
-    function decideMode(r) {
+    function selectMode(r) {
       if (!r.gap) return 'noloan';
       if (r.needsStatement && !state.acceptPlatformOffer) return 'statement';
       return 'loan';
@@ -561,7 +561,7 @@
 
     function showResults(animate = true) {
       const r = state.result;
-      state.mode = decideMode(r);
+      state.mode = selectMode(r);
       $('empty').classList.add('hidden');
       $('results').classList.remove('hidden');
       renderMetrics(r, animate);
@@ -703,12 +703,12 @@
             <span class="text-slate-600 flex items-center gap-2"><i data-lucide="loader-circle" class="w-4 h-4 animate-spin text-brand-600"></i>Hồ sơ đang ở hàng đợi Fast-track của thẩm định viên</span>
             <span class="flex gap-3 text-xs">
               <a href="02-lender-cockpit.html" target="_blank" class="text-teal-700 font-medium hover:underline flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Mở Cockpit ngân hàng</a>
-              <button id="sim-approve" class="text-slate-500 hover:text-slate-800 cursor-pointer">Mô phỏng duyệt</button>
+              <button id="sim-approve" class="text-slate-500 hover:text-slate-800 cursor-pointer">Ghi nhận duyệt</button>
             </span>
           </div>`;
         $('sim-approve').onclick = () => {
           EZX.set({ seller: { ...EZX.get().seller, status: 'approved', losRef: 'VCB-LOS-88912', approvedBy: 'Nguyễn Thu Hà' } });
-          EZX.log('Thẩm định viên', 'Duyệt hồ sơ (mô phỏng từ seller)');
+          EZX.log('Thẩm định viên', 'Duyệt hồ sơ từ seller');
           onSync(EZX.get());
         };
       } else if (status === 'approved') {

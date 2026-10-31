@@ -1,6 +1,6 @@
-/** Minh họa công khai trên landing, đơn vị triệu đồng. Không phải CashFlowEngine. */
+/** Phép chiếu dòng tiền trên landing, đơn vị triệu đồng. Không phải CashFlowEngine. */
 
-export type Sketch = {
+export type ProjectionInput = {
   lot: number;
   cash: number;
   dep: number;
@@ -9,7 +9,7 @@ export type Sketch = {
   payout: number;
 };
 
-export type SketchResult = {
+export type ProjectionResult = {
   gap: number;
   base: number[];
   withLoan: number[] | null;
@@ -25,7 +25,7 @@ const STRESS = 0.7;
 const RATE_WEEK = 0.0083;
 const DEDUCT_CAP = 0.25;
 
-function simulate(plan: Sketch, payout: number): number[] {
+function simulate(plan: ProjectionInput, payout: number): number[] {
   const out: number[] = [];
   let balance = plan.cash;
   for (let week = 0; week <= plan.weeks; week += 1) {
@@ -38,14 +38,14 @@ function simulate(plan: Sketch, payout: number): number[] {
   return out;
 }
 
-function thresholdPayout(plan: Sketch): number {
+function thresholdPayout(plan: ProjectionInput): number {
   for (let payout = 0; payout <= 300; payout += 1) {
     if (Math.min(...simulate(plan, payout)) >= 0) return payout;
   }
   return 300;
 }
 
-export function illustrate(plan: Sketch): SketchResult {
+export function projectCashflow(plan: ProjectionInput): ProjectionResult {
   const base = simulate(plan, plan.payout);
   const gap = Math.max(0, -Math.min(...base));
   if (!gap) {

@@ -14,7 +14,7 @@ import { useI18n, type Locale } from "@/lib/i18n";
 import type { Messages } from "@/lib/messages/vi";
 import type { EvalReport, StudioPolicy } from "@/lib/types";
 
-type Tab = "running" | "golden" | "bounds" | "traffic";
+type Tab = "running" | "evaluation" | "bounds" | "traffic";
 
 const RULE_EVIDENCE: Record<string, { evidence: string; keys: string[] }> = {
   R01: { evidence: "E5", keys: ["max_amount"] },
@@ -120,7 +120,7 @@ export default function StudioPage() {
         {loading ? <p className="mt-6 text-sm text-slate-600">{m.studio.loading}</p> : null}
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Metric label={m.studio.goldenCases} value={report ? String(report.summary.total) : "—"} />
+          <Metric label={m.studio.evaluationCases} value={report ? String(report.summary.total) : "—"} />
           <Metric label={m.studio.matched} value={report ? String(report.summary.passed) : "—"} tone="ok" />
           <Metric label={m.studio.drifted} value={report ? String(report.summary.failed) : "—"} tone={report && report.summary.failed > 0 ? "bad" : "ok"} />
           <Metric label={m.studio.matchRate} value={report ? `${passRate}%` : "—"} />
@@ -132,7 +132,7 @@ export default function StudioPage() {
             {(
               [
                 ["running", m.studio.running],
-                ["golden", m.studio.golden],
+                ["evaluation", m.studio.evaluation],
                 ["bounds", m.studio.bounds],
                 ["traffic", m.studio.traffic],
               ] as const
@@ -268,16 +268,13 @@ export default function StudioPage() {
           </div>
         ) : null}
 
-        {tab === "golden" && report ? (
+        {tab === "evaluation" && report ? (
           <section className="mt-5 grid gap-4 lg:grid-cols-12">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">{m.studio.goldenTitle}</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{m.studio.evaluationTitle}</h2>
                 </div>
-                <span className="mono max-w-[12rem] truncate text-[11px] text-slate-600" title={report.golden_digest}>
-                  {report.golden_digest}
-                </span>
               </div>
               <div className="mt-3">
                 <Field label={m.studio.findCase} htmlFor="case-query">
