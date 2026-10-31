@@ -140,3 +140,11 @@ Phiên này trên macOS: `uv run --locked ruff check` và `uv run --locked ruff 
 ### Route lõi fail closed
 
 Các path lõi SRS đã được đăng ký như placeholder có xác thực và role, trả 503 `WORKFLOW_UNAVAILABLE` khi đến handler. POST case kiểm thêm schema, idempotency header và ownership từ grant; các route chưa thực hiện workflow, chưa có đầy đủ schema body, và quyền trên case/resource chưa được kiểm qua repository. Hoàn thiện từng route sau gate tương ứng, kiểm thử tại TEST-01; CORE-01.25 vẫn in_progress. Xem HANDOFF để biết lệnh kiểm tra phiên này.
+
+### DOC-01: hợp nhất SRS đích ngày 2026-10-31
+
+Đã thay SRS tóm tắt bằng SRS 1.2 hợp nhất từ bản đính kèm người dùng: giữ đủ 41 FR nghiệp vụ và 6 NFR, thêm 6 AUTH (OAuth 2.0/OIDC, access token và quyền server) cùng 2 CONSIST. Ma trận khác biệt và cách dung hòa nằm trong `SRS_GAP_ANALYSIS.md`; không kế thừa báo cáo code “đạt” của commit lịch sử. GAPS ghi thêm consent và hiệu lực/tái thẩm định từ blocker có sẵn. DOC-01 giữ in_progress; việc hợp nhất tài liệu không nghiệm thu code hoặc phê duyệt policy.
+
+Kiểm tra tài liệu: script Python xác nhận đủ ID nguồn đích, không trùng, mỗi FR có acceptance; liên kết local, JSON tasklist, ID/dependency/document paths hợp lệ; `git diff --check` đạt. Không chạy kiểm thử nghiệp vụ trong thay đổi tài liệu. Tiếp theo triển khai/kiểm thử theo tasklist và chốt các quyết định bên ngoài còn mở.
+
+CORE-01.02/25: khôi phục `auth/me` dùng access token qua verifier Auth0 và resolver DB, bỏ route cấp token/mật khẩu khỏi app. Các router nghiệp vụ được cung cấp vẫn giữ trong repo nhưng chưa lắp: tạm dùng placeholder fail closed trong `api/routers/foundation` vì ownership/consent/policy chưa được tích hợp và nghiệm thu. Docker API khởi động; `/docs` trả 200, `/v1/auth/me` không token trả 401. Ruff check/format và `git diff --check` đạt; chưa chạy bộ test hoặc kiểm Auth0/DB thực. Cần cấu hình và xác nhận tenant, provisioning, kiểm thử TEST-01 và tích hợp quyền/resource trước khi mở workflow.

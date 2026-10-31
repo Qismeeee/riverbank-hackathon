@@ -144,3 +144,17 @@ Xem `NEXT_STEPS.md` để biết kết quả 45 passed và giới hạn. `make t
 Các router cases, copilot, underwriting, statements và studio đăng ký path lõi trong API.md. Các route yêu cầu auth và role server; POST case còn kiểm Plan, Idempotency-Key và seller/shop ownership. Chúng luôn trả 503 `WORKFLOW_UNAVAILABLE` sau các kiểm tra đó, không gọi service synthetic hoặc truy cập dữ liệu. Các contract body còn thiếu, kiểm ownership từ case và nested resource, consent, transaction và toàn bộ workflow cần hoàn thiện theo từng subtask trước khi thay placeholder. Không thể coi các route này là endpoint nghiệp vụ hoạt động.
 
 Phiên này: `uv run --locked ruff check` và `ruff format --check` trên router/security/availability/main đạt; khởi tạo app và tạo OpenAPI offline thành công (15 path); `python3 -m json.tool tasklist.json` và `git diff --check` đạt. Chưa chạy/bổ sung kiểm thử nghiệp vụ hoặc HTTP mới theo kế hoạch TEST-01; chưa sẵn sàng PR.
+
+## Handoff DOC-01: SRS 1.2 hợp nhất
+
+`SRS.md` dùng SRS 1.1 đính kèm làm đích, giữ 41 FR nghiệp vụ và 6 NFR; `SRS_GAP_ANALYSIS.md` ghi nguồn/hash, gap với bản tóm tắt cũ, khác biệt cần dung hòa và quy tắc giữ lại của repo. Đã đối chiếu BRD/BUSINESS/API/DATA/AGENTS, giữ OAuth 2.0 + OIDC và phân quyền DB phía server. Tenant/session/provisioning, consent, policy approval, R09/chủ thể, CIC/LOS, retention và terms/expiry vẫn cần quyết định có thẩm quyền; bản hợp nhất không cho phép tự bật workflow hoặc sửa policy.
+
+Đã kiểm bằng Python: đủ 41 FR và 6 NFR nguồn đích, tổng 49 FR có acceptance riêng, không trùng ID; liên kết local, JSON và dependency/document paths hợp lệ. `git diff --check` đạt. Không chạy kiểm thử backend vì đây là thay đổi tài liệu; chưa nghiệm thu bất kỳ flow mới. Các task triển khai giữ trạng thái hiện có, DOC-01.01/.02/.04 in_progress.
+
+## Handoff CORE-01.25: chuyển service được cung cấp
+
+Đã chuyển 51 file từ `api/services/services/` vào `api/services/`, đổi import `services.*` sang `api.services.*` và xóa thư mục lồng. Giữ 17 file nền cũ tại `api/services/foundation/`, cập nhật import trong auth, router, schema và test để bảo toàn contract hiện tại; `health.py` giữ nguyên. Cấu trúc và các dependency thiếu được ghi tại `api/services/README.md`. Đây là di chuyển source, chưa nối workflow mới, phê duyệt policy hoặc nghiệm thu SRS; CORE-01.25 tiếp tục in_progress.
+
+`uv run --locked pytest`: macOS/Python 3.12.16, 49 passed, 0 skipped, 0 failed. Parse cú pháp toàn bộ 69 file service và kiểm không còn import `services.*`/thư mục lồng đạt. Ruff check và format check trên foundation, security, routers, schemas, tests đạt; `git diff --check` đạt. Ruff toàn bộ service nhập mới báo 45 lỗi lint có sẵn trong bộ nguồn được cung cấp; chưa có kiểm thử tích hợp cho service mới và chưa chạy được toàn bộ `make test` vì phần lint này. Phải hoàn thiện các phụ thuộc, đối chiếu policy/consent/auth/version/schema trước tích hợp.
+
+CORE-01.02/25 handoff: API dùng `auth/me` với verifier Auth0 và DB grant; local password/token route không được lắp. Router nghiệp vụ mới giữ nguyên để tích hợp sau, hiện lắp placeholder fail closed tại `api/routers/foundation`. Bản auth local trước thay đổi được lưu trong thư mục backup tạm của phiên. Docker `/docs` 200, `auth/me` thiếu token 401; chưa xác minh đăng nhập thực, phân quyền resource hay chạy bộ test. Xem NEXT_STEPS để tiếp tục CORE-01 và giữ các gate.

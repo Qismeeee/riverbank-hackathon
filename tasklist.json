@@ -925,11 +925,13 @@
             "Đã chuyển health/db và auth/me sang router riêng, đưa kiểm tra kết nối DB sang service; giữ contract và dependency hiện có.",
             "Đã khai báo schema phản hồi auth/me cho OpenAPI, gồm role nền tảng và scoped grant seller.",
             "Kiểm thử HTTP offline auth/me, health/db và OpenAPI thành công qua ASGI; make test 47 passed trên macOS.",
-            "Các path lõi theo SRS đã đăng ký placeholder fail closed 503, có xác thực/kiểm role; POST case kiểm thêm seller/shop từ grant server."
+            "Các path lõi theo SRS đã đăng ký placeholder fail closed 503, có xác thực/kiểm role; POST case kiểm thêm seller/shop từ grant server.",
+            "Đã chuyển 51 file người dùng cung cấp từ api/services/services lên api/services; giữ 17 file nền trước đó tại api/services/foundation và cập nhật caller/import. Không bật workflow mới; pytest hiện hữu 49 passed trên macOS/Python 3.12.16."
           ],
           "remaining": [
             "Các endpoint nghiệp vụ chỉ triển khai sau gate tương ứng; còn kiểm thử quyền trên resource, idempotency, conflict và tích hợp theo TEST-01.",
-            "Placeholder chưa thực hiện workflow, chưa có body schema cho đa số route và chưa kiểm resource; cần nối implementation sau gate và kiểm thử HTTP tại TEST-01."
+            "Placeholder chưa thực hiện workflow, chưa có body schema cho đa số route và chưa kiểm resource; cần nối implementation sau gate và kiểm thử HTTP tại TEST-01.",
+            "Bộ service mới còn thiếu module hỗ trợ/config/policy/DB pool/model assets và dependency; Ruff toàn bộ service nhập mới còn 45 lỗi. Phải đối chiếu SRS/OIDC, consent, policy approval, version và schema trước tích hợp; xem api/services/README.md."
           ]
         },
         {
@@ -1234,17 +1236,18 @@
         "Agents/DATA.md",
         "Agents/GAPS.md",
         "database/riverbank-mini.dbml",
-        "database/README.md"
+        "database/README.md",
+        "Agents/SRS_GAP_ANALYSIS.md"
       ],
       "subtasks": [
         {
           "id": "DOC-01.01",
-          "status": "pending",
+          "status": "in_progress",
           "description": "Đối chiếu BRD, BUSINESS, SRS, SAD, DATA và API với implementation thực tế; sửa đường dẫn/tuyên bố không còn đúng."
         },
         {
           "id": "DOC-01.02",
-          "status": "pending",
+          "status": "in_progress",
           "description": "Lập truy vết BR/FR sang endpoint, component, acceptance và test tương ứng; phân biệt đã làm với thiết kế."
         },
         {
@@ -1254,15 +1257,17 @@
         },
         {
           "id": "DOC-01.04",
-          "status": "pending",
+          "status": "in_progress",
           "description": "Cập nhật README, NEXT_STEPS và tasklist theo tiến độ, mode demo/production và giới hạn xác minh."
         }
       ],
       "progress": [
-        "Đã bổ sung ma trận flow_design và task/acceptance chi tiết cho các khoảng trống về consent, nguồn, guard, sao kê, memo, persistence và endpoint mở rộng; đây là thiết kế backlog, chưa nghiệm thu triển khai."
+        "Đã bổ sung ma trận flow_design và task/acceptance chi tiết cho các khoảng trống về consent, nguồn, guard, sao kê, memo, persistence và endpoint mở rộng; đây là thiết kế backlog, chưa nghiệm thu triển khai.",
+        "2026-10-31: hợp nhất SRS 1.2 từ SRS 1.1 đính kèm, giữ 41 FR nghiệp vụ và 6 NFR, bổ sung 6 AUTH OAuth 2.0/OIDC và 2 CONSIST; phân tích gap tại Agents/SRS_GAP_ANALYSIS.md. Đã đối chiếu BRD và giữ các bất biến, không kế thừa bảng code đạt lịch sử."
       ],
       "remaining": [
-        "Đối chiếu từng BR/FR tới implementation và kết quả test thực theo DOC-01.01–.02; cập nhật contract mở sau quyết định có thẩm quyền."
+        "Đối chiếu từng BR/FR tới implementation và kết quả test thực theo DOC-01.01–.02; cập nhật contract mở sau quyết định có thẩm quyền.",
+        "Nghiệm thu từng FR trên implementation thực; chốt các contract ngoài team tại GAPS. SRS hợp nhất và phân tích gap là yêu cầu đích, không chứng minh flow hoặc policy đã đạt."
       ]
     },
     {

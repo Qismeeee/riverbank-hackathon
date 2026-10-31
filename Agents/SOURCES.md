@@ -4,7 +4,7 @@
 |---|---|
 | Bối cảnh và quy ước | [CONTEXT](CONTEXT.md), [AGENTS](AGENTS.md) |
 | Nghiệp vụ | [BRD](BRD.md), [BUSINESS](BUSINESS.md) |
-| Yêu cầu và nghiệm thu | [SRS](SRS.md), [TEST_PLAN](TEST_PLAN.md) |
+| Yêu cầu và nghiệm thu | [SRS](SRS.md), [đối chiếu SRS đích](SRS_GAP_ANALYSIS.md), [TEST_PLAN](TEST_PLAN.md) |
 | Thiết kế và tích hợp | [SAD](SAD.md), [API](API.md), [DATA](DATA.md) |
 | Quyết định và triển khai | [GAPS](GAPS.md), [NEXT_STEPS](NEXT_STEPS.md), [HANDOFF](HANDOFF.md) |
 | Policy | [Ý nghĩa rule](../policy/policy.md), [tham số](../policy/parameters.yaml), [ví dụ](../policy/worked-examples.md) |
