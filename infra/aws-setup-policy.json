@@ -5,37 +5,64 @@
       "Sid": "AuditProductionResources",
       "Effect": "Allow",
       "Action": [
-        "ec2:DescribeAddresses", "ec2:DescribeInstances",
-        "ec2:DescribeInstanceStatus", "ec2:DescribeNetworkInterfaces",
-        "ec2:DescribeSecurityGroups", "ec2:DescribeVolumes",
-        "rds:DescribeDBInstances", "rds:DescribeDBSnapshots",
-        "cloudwatch:DescribeAlarms", "cloudwatch:GetMetricData",
-        "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics",
+        "ec2:DescribeAddresses",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeVolumes",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBSnapshots",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics",
         "logs:DescribeLogGroups"
       ],
       "Resource": "*",
-      "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-1"}}
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
     },
     {
       "Sid": "AllocateTaggedProjectAddress",
       "Effect": "Allow",
       "Action": "ec2:AllocateAddress",
       "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
-      "Condition": {"StringEquals": {"aws:RequestTag/Project": "riverbank-hackathon"}}
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "riverbank-hackathon"
+        }
+      }
     },
     {
       "Sid": "TagAddressDuringAllocation",
       "Effect": "Allow",
       "Action": "ec2:CreateTags",
       "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
-      "Condition": {"StringEquals": {"ec2:CreateAction": "AllocateAddress", "aws:RequestTag/Project": "riverbank-hackathon"}}
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": "AllocateAddress",
+          "aws:RequestTag/Project": "riverbank-hackathon"
+        }
+      }
     },
     {
       "Sid": "AssociateOnlyProjectAddress",
       "Effect": "Allow",
-      "Action": ["ec2:AssociateAddress", "ec2:DisassociateAddress", "ec2:ReleaseAddress"],
+      "Action": [
+        "ec2:AssociateAddress",
+        "ec2:DisassociateAddress",
+        "ec2:ReleaseAddress"
+      ],
       "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
-      "Condition": {"StringEquals": {"aws:ResourceTag/Project": "riverbank-hackathon"}}
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "riverbank-hackathon"
+        }
+      }
     },
     {
       "Sid": "AssociateOnlySelectedInstance",
@@ -49,13 +76,23 @@
     {
       "Sid": "ConfigureExistingDatabaseSecurityGroup",
       "Effect": "Allow",
-      "Action": ["ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupIngress"],
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress"
+      ],
       "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:security-group/sg-0b4600441c5cba12d"
     },
     {
       "Sid": "ProjectLogGroup",
       "Effect": "Allow",
-      "Action": ["logs:CreateLogGroup", "logs:PutRetentionPolicy", "logs:DescribeLogStreams", "logs:GetLogEvents", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
       "Resource": [
         "arn:aws:logs:ap-southeast-1:424016506356:log-group:/riverbank-hackathon/*",
         "arn:aws:logs:ap-southeast-1:424016506356:log-group:/riverbank-hackathon/*:*"
@@ -64,7 +101,10 @@
     {
       "Sid": "ProjectAlarms",
       "Effect": "Allow",
-      "Action": ["cloudwatch:PutMetricAlarm", "cloudwatch:TagResource"],
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:TagResource"
+      ],
       "Resource": "arn:aws:cloudwatch:ap-southeast-1:424016506356:alarm:riverbank-hackathon-*"
     },
     {
@@ -76,7 +116,12 @@
     {
       "Sid": "InspectExistingBucketProtection",
       "Effect": "Allow",
-      "Action": ["s3:GetBucketPublicAccessBlock", "s3:GetEncryptionConfiguration", "s3:GetBucketVersioning", "s3:GetLifecycleConfiguration"],
+      "Action": [
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketVersioning",
+        "s3:GetLifecycleConfiguration"
+      ],
       "Resource": "arn:aws:s3:::riverbank-data-424016506356"
     },
     {
@@ -88,11 +133,98 @@
     {
       "Sid": "InspectExistingInstanceRole",
       "Effect": "Allow",
-      "Action": ["iam:GetInstanceProfile", "iam:GetRole", "iam:ListAttachedRolePolicies", "iam:ListRolePolicies", "iam:GetRolePolicy"],
+      "Action": [
+        "iam:GetInstanceProfile",
+        "iam:GetRole",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:GetRolePolicy"
+      ],
       "Resource": [
         "arn:aws:iam::424016506356:instance-profile/riverbank-ec2-role",
         "arn:aws:iam::424016506356:role/riverbank-ec2-role"
       ]
+    },
+    {
+      "Sid": "CreateTaggedUserPool",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:CreateUserPool"
+      ],
+      "Resource": "arn:aws:cognito-idp:ap-southeast-1:424016506356:userpool/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "riverbank-hackathon"
+        }
+      }
+    },
+    {
+      "Sid": "ManageTaggedPool",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:UpdateUserPool",
+        "cognito-idp:DeleteUserPool",
+        "cognito-idp:CreateUserPoolClient",
+        "cognito-idp:UpdateUserPoolClient",
+        "cognito-idp:DeleteUserPoolClient",
+        "cognito-idp:CreateUserPoolDomain",
+        "cognito-idp:UpdateUserPoolDomain",
+        "cognito-idp:DeleteUserPoolDomain",
+        "cognito-idp:CreateGroup",
+        "cognito-idp:UpdateGroup",
+        "cognito-idp:DeleteGroup",
+        "cognito-idp:TagResource",
+        "cognito-idp:UntagResource",
+        "cognito-idp:SetUserPoolMfaConfig"
+      ],
+      "Resource": "arn:aws:cognito-idp:ap-southeast-1:424016506356:userpool/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "riverbank-hackathon"
+        }
+      }
+    },
+    {
+      "Sid": "InspectPoolConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:DescribeUserPool",
+        "cognito-idp:DescribeUserPoolClient",
+        "cognito-idp:DescribeUserPoolDomain",
+        "cognito-idp:GetGroup",
+        "cognito-idp:ListGroups",
+        "cognito-idp:ListUserPoolClients",
+        "cognito-idp:ListTagsForResource",
+        "cognito-idp:DescribeManagedLoginBrandingByClient",
+        "cognito-idp:CreateManagedLoginBranding",
+        "cognito-idp:DeleteManagedLoginBranding",
+        "cognito-idp:GetUserPoolMfaConfig"
+      ],
+      "Resource": "arn:aws:cognito-idp:ap-southeast-1:424016506356:userpool/*"
+    },
+    {
+      "Sid": "ProjectSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:TagResource",
+        "secretsmanager:UntagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:ap-southeast-1:424016506356:secret:riverbank-hackathon/*"
+    },
+    {
+      "Sid": "ReadCostAndCreditUsage",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage"
+      ],
+      "Resource": "*"
     }
   ]
 }

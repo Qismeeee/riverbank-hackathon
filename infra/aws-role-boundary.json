@@ -1,0 +1,163 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ProjectContainerLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:ap-southeast-1:424016506356:log-group:/riverbank-hackathon/app:log-stream:*"
+    },
+    {
+      "Sid": "ProjectHostMetrics",
+      "Effect": "Allow",
+      "Action": "cloudwatch:PutMetricData",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "RiverbankHackathon/Host"
+        }
+      }
+    },
+    {
+      "Sid": "SharedDatabaseCredentialRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:ap-southeast-1:424016506356:secret:rds!db-1893a3d4-b65e-47a7-bb55-2134b3deaff7-*"
+    },
+    {
+      "Sid": "ProjectServiceCredentialRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:ap-southeast-1:424016506356:secret:riverbank-hackathon/*"
+    },
+    {
+      "Sid": "BucketMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::riverbank-data-424016506356"
+    },
+    {
+      "Sid": "ProjectObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::riverbank-data-424016506356/riverbank-hackathon/*"
+    },
+    {
+      "Sid": "RegistryLogin",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
+    },
+    {
+      "Sid": "ProjectRegistry",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:DescribeImages",
+        "ecr:DescribeRepositories",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage"
+      ],
+      "Resource": "arn:aws:ecr:ap-southeast-1:424016506356:repository/riverbank-hackathon-api"
+    },
+    {
+      "Sid": "DeployOnlySelectedHost",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand"
+      ],
+      "Resource": [
+        "arn:aws:ec2:ap-southeast-1:424016506356:instance/i-06ab8a545deb7a7f3",
+        "arn:aws:ssm:ap-southeast-1:424016506356:document/riverbank-hackathon-deploy"
+      ]
+    },
+    {
+      "Sid": "ReadDeploymentStatus",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "ssm:ListCommands",
+        "ssm:DescribeInstanceInformation"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
+    },
+    {
+      "Sid": "ManagedInstanceRegistration",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:UpdateInstanceInformation",
+        "ssm:ListInstanceAssociations",
+        "ssm:DescribeAssociation",
+        "ssm:GetDeployablePatchSnapshotForInstance",
+        "ssm:GetDocument",
+        "ssm:DescribeDocument",
+        "ssm:GetManifest",
+        "ssm:ListAssociations",
+        "ssm:PutInventory",
+        "ssm:PutComplianceItems",
+        "ssm:PutConfigurePackageResult",
+        "ssm:UpdateAssociationStatus",
+        "ssm:UpdateInstanceAssociationStatus"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
+    },
+    {
+      "Sid": "AgentChannels",
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel",
+        "ec2messages:AcknowledgeMessage",
+        "ec2messages:DeleteMessage",
+        "ec2messages:FailMessage",
+        "ec2messages:GetEndpoint",
+        "ec2messages:GetMessages",
+        "ec2messages:SendReply"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
+    }
+  ]
+}

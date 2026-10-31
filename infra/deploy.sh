@@ -8,8 +8,8 @@ project=${COMPOSE_PROJECT_NAME:-riverbank-hackathon}
 release=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 root=$(dirname -- "$(dirname -- "$release")")
 
-[[ "$image" =~ ^ghcr\.io/[a-z0-9._/-]+:[a-f0-9]{40}$ ]] || {
-    echo 'Expected a GHCR image tagged with the full commit SHA' >&2
+[[ "$image" =~ ^(ghcr\.io/[a-z0-9._/-]+|[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/riverbank-hackathon-api):[a-f0-9]{40}$ ]] || {
+    echo 'Expected a project registry image tagged with the full commit SHA' >&2
     exit 1
 }
 [[ "$release" == "$root/releases/"* && -f "$root/.env" ]] || {
@@ -74,7 +74,7 @@ rollback() {
     if (( started )); then
         if [[ -n "$previous" ]]; then
             echo 'Deployment failed; restoring the previous image and Compose/Caddy configuration' >&2
-            if compose "$previous" "$(cat "$previous/image")" up -d --wait --wait-timeout 90 \
+            if compose "$previous" "$(cat "$previous/image")" up -d --wait --wait-timeout 240 \
                 && check_health; then
                 echo 'Rollback passed' >&2
             else
@@ -113,7 +113,7 @@ fi
 [[ "$(docker image inspect --format '{{.Architecture}}' "$image")" == arm64 ]]
 printf '%s\n' "$image" > "$release/image"
 started=1
-compose "$release" "$image" up -d --wait --wait-timeout 90
+compose "$release" "$image" up -d --wait --wait-timeout 240
 container=$(compose "$release" "$image" ps -q api)
 [[ "$(docker inspect --format '{{.Config.Image}}' "$container")" == "$image" ]]
 check_health

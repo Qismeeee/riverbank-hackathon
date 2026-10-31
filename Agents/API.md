@@ -2,6 +2,30 @@
 
 Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết](API.md) và [FE integration](API.md). Router và schema được tổ chức trong `../api/routers/` và `../api/services/underwriting/models.py`.
 
+## Bàn giao Cognito cho BE — 31/10/2026
+
+Hạ tầng Cognito đã dựng và kiểm MFA/discovery/JWKS/trang PKCE login. FastAPI hiện chỉ có `/health` và `/ready`; chưa có JWT dependency, callback frontend hoặc các API nghiệp vụ trong bảng bên dưới. Không coi danh sách contract là endpoint đã triển khai.
+
+```dotenv
+COGNITO_ISSUER=https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_IwpfqsPbI
+COGNITO_CLIENT_ID=6bn75vdg2p0pomc8k0e7gle1ld
+ALLOWED_ORIGINS=http://localhost:3000,https://ezxriverbank-hackathon.vercel.app
+```
+
+Hai biến Cognito được đọc tập trung qua `api/config.py`; `.env` local và `.env` EC2 đã cập nhật. Client là public client, không dùng client secret. Discovery ở issuer + `/.well-known/openid-configuration`; JWKS ở issuer + `/.well-known/jwks.json`. Login domain: `https://riverbank-hackathon-424016506356.auth.ap-southeast-1.amazoncognito.com`, authorize `/oauth2/authorize`, token `/oauth2/token`. Scopes hiện có `openid email profile`; chưa có resource server/custom scopes nghiệp vụ.
+
+FE thực hiện Authorization Code + PKCE S256, kiểm state và gửi `Authorization: Bearer <access_token>` tới API. Callback đã đăng ký `https://ezxriverbank-hackathon.vercel.app/auth/callback` và `http://localhost:3000/auth/callback`; logout là origin tương ứng không có dấu slash cuối. TOTP MFA bắt buộc. `.env.frontend` local chỉ chứa cấu hình public cho Next.js, không gửi backend `.env` hoặc credential AWS/model/DB cho FE.
+
+BE triển khai dependency lấy current user dùng chung cho router; dependency role riêng cho seller/underwriter, và kiểm quyền hồ sơ tại service/repository. `HTTPBearer`/`OAuth2AuthorizationCodeBearer` chỉ khai báo/lấy token, không tự xác minh JWT. Nếu muốn nút OAuth2 Authorize trong Swagger, cần đăng ký riêng callback `/docs/oauth2-redirect` đúng host; hiện callback Swagger chưa được thêm.
+
+BE xác minh RS256 bằng JWKS từ issuer đã cấu hình, cache và refresh khi key rotation; kiểm issuer, expiration, token_use=access và client_id đúng client ở trên. Access token Cognito dùng client_id để ràng buộc app; không áp kiểm audience của ID token thay cho nó. Chỉ tin cognito:groups sau khi xác minh chữ ký; nhóm có thể thiếu, khi đó từ chối endpoint yêu cầu role. Không tin role/seller_id/shop_id do client tự khai hoặc header X-Role trong production. Dùng sub để tra quan hệ seller/shop và grants trong DB; group underwriter do admin cấp.
+
+Production lấy token từ Cognito, không tự ký JWT qua route demo `/v1/auth/token`. JWT offline không tự biết token đã bị revoke; BE cần chốt cơ chế logout/thu hồi phiên và hiệu lực quyền khi membership thay đổi. Có thể dùng Redis cho denylist/session theo thiết kế sau khi thống nhất, không coi kiểm chữ ký là đã xử lý revocation.
+
+Thiếu token, token sai/hết hạn hoặc ID token dùng thay access token: 401. Token hợp lệ nhưng thiếu role/quyền hồ sơ: 403 theo contract. Giữ health/readiness public cho hạ tầng. Không log access/refresh token hoặc Authorization header. Kiểm tối thiểu wrong issuer/client, bad signature, expired token, ID token, seller truy cập hồ sơ khác, seller gọi route ngân hàng và user không có group. Cần kiểm bằng token thật sau khi FE callback và BE verifier có implementation; chưa có bằng chứng token exchange/login end-to-end trong phiên DevOps.
+
+Tài liệu chính thức: [AWS xác minh JWT](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html), [AWS Code + PKCE](https://docs.aws.amazon.com/cognito/latest/developerguide/using-pkce-in-authorization-code.html).
+
 ## API lõi
 
 | Method | Path | Vai trò |

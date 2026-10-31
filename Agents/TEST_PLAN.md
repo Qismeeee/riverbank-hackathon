@@ -65,3 +65,11 @@ Acceptance criteria của task đạt, kiểm tra phù hợp rủi ro, `make tes
 NFR latency/cost đo riêng có timestamp, cấu hình model, số case và percentile/trung bình. Không dùng thời gian pytest offline để suy ra SLA online.
 
 Nghiệm thu phải phân biệt kiểm tra tài liệu, test backend offline, test tích hợp và kiểm tra môi trường triển khai.
+
+## Hạ tầng Kafka/Redis/Cognito — 31/10/2026
+
+`make test` gồm cfn-lint cho infra/platform.yaml và kiểm quota policy/permissions boundary; chạy offline, không cần AWS. Bộ mới nhất 34 pass trên Linux. kafka-python phát deprecation warnings; không che hoặc skip chúng.
+
+`make services-smoke` giả định API image đã build. CI chạy ARM64 native; local x86 dùng `make services-smoke PLATFORM=linux/amd64`, còn bằng chứng ARM64 là EC2 native. Smoke tạo topic/key giả, kiểm auth/ACL/Python clients, restart broker/Redis, đọc lại dữ liệu rồi xóa topic/key test; không publish cổng và không xóa volume. Không dùng ignore-warnings ARM64-COW-BUG để vượt kiểm tra Redis dưới QEMU.
+
+Trên AWS đã kiểm HTTPS, bốn dependency readiness, IO/persistence, ECR role push/pull và SSM Verify (không deploy commit). Cognito kiểm MFA/code-only/public client/callbacks, discovery/JWKS và trang PKCE login HTTP 200; chưa tạo user hoặc exchange token. GitHub OIDC/CD code mới, receipt SNS và restore chưa được coi là pass.

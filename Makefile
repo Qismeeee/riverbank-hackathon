@@ -4,7 +4,7 @@ UV ?= uv
 IMAGE ?= riverbank-hackathon:base-01
 PLATFORM ?= linux/arm64
 
-.PHONY: help setup sync test run db-tunnel docker-build docker-smoke
+.PHONY: help setup sync test run db-tunnel services-tunnel docker-build docker-smoke services-smoke
 
 help:
 	@echo "setup: install locked dependencies and local pre-commit hooks"
@@ -26,6 +26,7 @@ test:
 	bash -n infra/deploy.sh
 	$(UV) run --offline --no-sync ruff check api scripts
 	$(UV) run --offline --no-sync ruff format --check api scripts
+	$(UV) run --offline --no-sync cfn-lint infra/platform.yaml
 	$(UV) run --offline --no-sync pytest
 
 run:
@@ -34,8 +35,14 @@ run:
 db-tunnel:
 	$(UV) run --offline --no-sync python -m scripts.db_tunnel
 
+services-tunnel:
+	$(UV) run --offline --no-sync python -m scripts.db_tunnel --services
+
 docker-build:
 	docker buildx build --platform $(PLATFORM) --load --tag $(IMAGE) .
 
 docker-smoke:
 	$(UV) run --offline --no-sync python scripts/docker_smoke.py --image $(IMAGE) --platform $(PLATFORM)
+
+services-smoke:
+	$(UV) run --offline --no-sync python scripts/services_smoke.py --platform $(PLATFORM) --api-image $(IMAGE)
