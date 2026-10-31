@@ -2,16 +2,29 @@
 
 ## Môi trường kiểm thử
 
-Chuẩn hóa các lệnh dưới đây trong task BASE-01, rồi chạy từ gốc repository trong WSL/Linux. Bộ tài liệu không bao gồm backend, Makefile hoặc bộ test thực thi. Python 3.12, uv, make là phụ thuộc. Docker/Postgres chỉ cần cho đường tích hợp DB. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
+BASE-01 đã cung cấp API `/health`, Makefile và test thực thi. Chạy từ gốc repository trong WSL/Linux với Python 3.12, uv 0.13.6 và GNU make. Docker/Buildx cần cho build và smoke test container; Postgres chưa thuộc implementation này. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
 
 ```bash
 make setup
 make test
 ```
 
-`make setup` tạo môi trường và cài dependency/pre-commit. Không chạy lại nếu đã có môi trường phù hợp. `make test` gồm ruff check, format check và pytest. Với PowerShell, Makefile hiện dùng `.venv/bin` và cú pháp biến môi trường POSIX, nên chọn WSL hoặc ghi rõ lệnh tương đương, không giả định chạy nguyên bản được trên Windows.
+`make setup` dùng `uv sync --locked --dev` tạo môi trường từ `uv.lock` rồi cài Git pre-commit hooks. `make sync` cài cùng dependency mà không sửa hooks, dùng trong CI. Không cần chạy setup lại khi môi trường đã phù hợp. `make test` đồng bộ dependency với lock ở chế độ offline, chạy `ruff check api scripts`, `ruff format --check api scripts` và pytest; thiếu cache/dependency hoặc lock lệch phải báo lỗi.
+
+Không cần `.env`, AWS, DB hoặc model API key để chạy API/test. Test dùng ASGI TestClient và chặn kết nối ra ngoài; socket nội bộ loopback của asyncio trên Windows được cho phép. Biến cấu hình và thư mục làm việc được cô lập khỏi `.env` local. Lần setup đầu cần mạng tải dependency. Xem lệnh PowerShell tương đương tại [README](../README.md); khi dùng chung checkout, giữ `.venv` của Windows và `.venv-linux` của WSL riêng.
+
+```bash
+make docker-build PLATFORM=linux/arm64
+make docker-smoke PLATFORM=linux/arm64
+```
+
+Máy x86 cần QEMU/binfmt. Smoke test kiểm tra platform/user, chạy container, gọi HTTP `/health` và thực thi healthcheck trong image, rồi dừng container tạm. CI dùng cùng `make test`, build/smoke ARM64 và kiểm Compose/Caddy. Kết quả local không thay thế run GitHub hoặc kiểm chứng trên EC2 ARM64. Xem [hướng dẫn CI/CD](../README.md#cicd).
+
+`make test` kiểm thêm cú pháp `infra/deploy.sh`. `api/tests/test_deploy.py` chạy Bash với Docker/curl giả lập, kiểm deploy thành công, rollback khi startup/health lỗi, lỗi lần đầu giữ volume và preflight không đổi stack đang chạy. Các test này chạy trên Linux (CI/WSL), skip có lý do trên Windows; không coi mock là bằng chứng SSH/AWS thật.
 
 ## Ma trận nghiệm thu
+
+Ma trận nghiệp vụ dưới đây là yêu cầu cho các task sau; BASE-01 chưa triển khai hoặc nghiệm thu các luồng này.
 
 | Kịch bản | Kết quả bắt buộc |
 |---|---|
@@ -32,6 +45,8 @@ make test
 | CSV/PDF/ảnh | CSV parser, PDF chữ parser, scan/ảnh OCR có điều kiện và lỗi rõ |
 
 ## Tệp test theo mảng
+
+Hiện có `api/tests/test_health.py`, `test_config.py` và `test_deploy.py`. Danh sách nghiệp vụ dưới đây là cấu trúc test dự kiến, chưa phải các test đã tồn tại hoặc đã pass.
 
 - Engine/policy: `api/tests/test_cashflow.py`, `test_rules.py`, `test_golden.py`.
 - Workflow/permission: `test_underwriting.py`, `test_auth.py`, `test_underwriting_shopee.py`.

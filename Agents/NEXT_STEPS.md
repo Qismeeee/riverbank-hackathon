@@ -19,6 +19,16 @@ Kế hoạch triển khai được chia theo dependency và tiêu chí nghiệm 
 | P7-01 Monitor | P3 sau VER-01, policy/BL-11 đã chốt | Tính phương án bằng code, D22 có evidence, người duyệt version mới | Không đổi lịch ACTIVE trước duyệt, không tự cơ cấu, retry/idempotency đúng |
 | BANK-01 adapter thật | Sau contract ngân hàng | CIC/LOS adapter với sandbox và auth phù hợp | Scope/consent/retry đúng, không dùng mock làm bằng chứng tích hợp thật |
 
+## Trạng thái BASE-01 — 31/10/2026
+
+Đã triển khai Python 3.12, uv lock, cấu hình tập trung, API `/health`, `make setup/test` và Docker ARM64. Hướng dẫn local/production được gom tại [README](../README.md). Bỏ entrypoint chỉ bọc exec; Docker chạy Python trực tiếp bằng exec-form CMD.
+
+Đã cấu hình một workflow CI/CD theo GHCR → EC2 ARM64/Compose/Caddy. CD khóa sau CI, chỉ bật trên main khi có ENABLE_DEPLOY=true và cấu hình production. Có kiểm image/health, lưu release, rollback cả image và Compose/Caddy; chưa có tài nguyên AWS được tạo. Bộ kiểm tra WSL: `make UV=./.tools-linux/uv test` đạt 13 pytest pass, 0 skip/fail; Bash syntax, Ruff lint/format, ShellCheck và actionlint đạt. Biến môi trường local như README.
+
+Docker: `make docker-build PLATFORM=linux/arm64` và `make UV=./.tools-linux/uv docker-smoke PLATFORM=linux/arm64` đạt trên Engine WSL/QEMU; smoke chờ trạng thái healthy thực tế. Compose config/Caddy validate đạt. Đã kiểm deployment thật trên project test riêng: bản đầu HTTP 200, bản Caddy lỗi cố ý trả 503, script trả lỗi và rollback về đúng image/config trước đó, HTTP 200 phục hồi; container test đã dừng, volume giữ lại. Không coi kiểm tra HTTP local này là bằng chứng certificate/HTTPS hoặc SSH AWS.
+
+Chưa có run GitHub thực tế, chưa push GHCR/SSH production hoặc kiểm HTTPS AWS. BASE-01 còn bước kiểm chứng Quality/Docker ARM64 trên GitHub sau khi dev push/mở PR. Chưa thay branch protection, commit/push/merge hoặc bật ENABLE_DEPLOY. Sau đó triển khai SRC-01; các hệ thống khác trong SAD vẫn cần xây theo task.
+
 ## Thực hiện FE-01
 
 1. Xác định package frontend và thiết kế màn hình seller, lender, studio theo BRD/SRS.
