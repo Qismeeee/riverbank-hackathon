@@ -1,51 +1,102 @@
-"""Minimal HTTP application for BASE-01."""
+import socket
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
-from typing import Literal
-
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
-from api.config import Settings, get_settings
-from api.readiness import check_dependencies
+import config
+from middleware import RequestTiming
+from routers.auth import router as auth_router
+from routers.copilot import cases_router as copilot_cases_router
+from routers.copilot import router as copilot_router
+from routers.events import start_relay
+from routers.jobs import router as jobs_router
+from routers.jobs import start_worker
+from routers.studio import router as studio_router
+from routers.underwriting import router as underwriting_router
+from services.underwriting.models import WorkflowError
 
 
-class HealthResponse(BaseModel):
-    status: Literal["ok"] = "ok"
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stops = [start_worker(), start_relay()]
+    yield
+    for stop in stops:
+        if stop:
+            stop.set()
 
 
-class ReadinessResponse(BaseModel):
-    status: Literal["ok", "unavailable"]
-    checks: dict[str, str]
+app = FastAPI(title="Riverbank API", version="0.1.0", lifespan=lifespan)
+app.include_router(auth_router)
+app.include_router(underwriting_router)
+app.include_router(studio_router)
+app.include_router(copilot_router)
+app.include_router(copilot_cases_router)
+app.include_router(jobs_router)
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    settings = settings or get_settings()
-    application = FastAPI(title=settings.app_name)
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.allowed_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+@app.exception_handler(WorkflowError)
+async def workflow_error_handler(request, exc: WorkflowError):
+    return JSONResponse(
+        status_code=exc.status,
+        content={"detail": {"code": exc.code, "details": exc.details}},
+        headers=exc.headers,
     )
 
-    @application.get("/health", response_model=HealthResponse)
-    def health() -> HealthResponse:
-        """Report process liveness; no database or provider readiness is implied."""
-        return HealthResponse()
 
-    @application.get("/ready", response_model=ReadinessResponse)
-    def ready(response: Response) -> ReadinessResponse:
-        checks = check_dependencies(settings)
-        available = all(value == "ok" for value in checks.values())
-        response.status_code = 200 if available else 503
-        response.headers["Cache-Control"] = "no-store"
-        return ReadinessResponse(
-            status="ok" if available else "unavailable", checks=checks
-        )
-
-    return application
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-ID", "Retry-After", "Content-Disposition"],
+)
+app.add_middleware(RequestTiming)
 
 
-app = create_app()
+def _check_db() -> str:
+    url = config.database_url()
+    if not url:
+        return "skipped"
+    try:
+        import psycopg
+
+        with psycopg.connect(url, connect_timeout=3) as conn:
+            conn.execute("select 1")
+        return "ok"
+    except Exception as e:
+        return f"error: {type(e).__name__}"
+
+
+def _check_s3() -> str:
+    if not config.S3_BUCKET:
+        return "skipped"
+    try:
+        import boto3
+
+        boto3.client("s3", region_name=config.AWS_REGION).head_bucket(Bucket=config.S3_BUCKET)
+        return "ok"
+    except Exception as e:
+        return f"error: {type(e).__name__}"
+
+
+@app.get("/health")
+def health():
+    db, s3 = _check_db(), _check_s3()
+    ok = all(v in ("ok", "skipped") for v in (db, s3))
+    return {
+        "status": "ok" if ok else "degraded",
+        "env": config.ENV,
+        "db": db,
+        "s3": s3,
+        "host": socket.gethostname(),
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/")
+def root():
+    return {"service": "riverbank-api", "docs": "/docs"}

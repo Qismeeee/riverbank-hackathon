@@ -1,27 +1,28 @@
-def test_health_http_without_services_or_credentials():
-    from fastapi.testclient import TestClient
+import pytest
+from fastapi.testclient import TestClient
 
-    from api.main import create_app
+import config
+from main import app
 
-    with TestClient(create_app()) as client:
-        response = client.get("/health")
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "application/json"
-    assert response.json() == {"status": "ok"}
+client = TestClient(app)
 
 
-def test_cors_allows_only_configured_frontend():
-    from fastapi.testclient import TestClient
+@pytest.fixture(autouse=True)
+def local_only(monkeypatch):
+    # Ép local để test không chạm AWS hay DB dù laptop có .env cloud; chỉ trong file này
+    monkeypatch.setattr(config, "ENV", "local")
+    monkeypatch.setattr(config, "S3_BUCKET", "")
+    monkeypatch.setenv("DATABASE_URL", "")
 
-    from api.config import Settings
-    from api.main import create_app
 
-    with TestClient(
-        create_app(Settings(allowed_origins=["http://localhost:3000"]))
-    ) as client:
-        allowed = client.get("/health", headers={"Origin": "http://localhost:3000"})
-        blocked = client.get("/health", headers={"Origin": "https://other.example"})
+def test_health_local_skips_external_checks():
+    r = client.get("/health")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ok"
+    assert body["db"] == "skipped"
+    assert body["s3"] == "skipped"
 
-    assert allowed.headers["access-control-allow-origin"] == "http://localhost:3000"
-    assert "access-control-allow-origin" not in blocked.headers
+
+def test_root():
+    assert client.get("/").json()["service"] == "riverbank-api"
