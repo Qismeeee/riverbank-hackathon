@@ -27,6 +27,9 @@ if tool == "sleep":
 if tool == "curl":
     if mode == "health" and state.read_text() == os.environ["NEW_IMAGE"]:
         sys.exit(22)
+    if (mode == "ready" and args[-1].endswith("/ready")
+            and state.read_text() == os.environ["NEW_IMAGE"]):
+        sys.exit(22)
     print('{"status":"ok"}')
 elif args[:2] == ["image", "inspect"]:
     if "--format" in args:
@@ -99,7 +102,7 @@ def test_success_promotes_release_and_retains_previous(deployment):
     assert (root / "previous").resolve() == previous
 
 
-@pytest.mark.parametrize("failure", ["up", "health"])
+@pytest.mark.parametrize("failure", ["up", "health", "ready"])
 def test_failure_restores_previous_image_and_configuration(
     deployment, monkeypatch, failure
 ):

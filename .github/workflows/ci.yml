@@ -65,8 +65,10 @@ jobs:
         env:
           API_IMAGE: riverbank-hackathon:base-01
           SITE_ADDRESS: localhost
+          CLOUDWATCH_LOG_GROUP: /riverbank-hackathon/app
         run: |
           docker compose -f infra/compose.yaml config --quiet
+          docker compose -f infra/compose.yaml -f infra/compose.aws.yaml config --quiet
           docker run --rm --platform linux/arm64 \
             -e SITE_ADDRESS=localhost \
             -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" \
@@ -138,6 +140,6 @@ jobs:
           target="$EC2_USER@$EC2_HOST"
           release="/opt/riverbank-hackathon/releases/$GITHUB_SHA"
           ssh "${ssh_options[@]}" "$target" "mkdir -p '$release'"
-          scp "${ssh_options[@]}" infra/compose.yaml infra/Caddyfile infra/deploy.sh "$target:$release/"
+          scp "${ssh_options[@]}" infra/compose.yaml infra/compose.aws.yaml infra/Caddyfile infra/deploy.sh "$target:$release/"
           printf '%s\n' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$target" \
             "bash '$release/deploy.sh' '$IMAGE' 'https://$SITE_ADDRESS/health' '$GHCR_USER'"

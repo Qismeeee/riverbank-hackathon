@@ -5,6 +5,7 @@
 .aws/
 *.pem
 *.key
+*_accessKeys.csv
 
 # Python environments, tooling and generated files
 .venv/

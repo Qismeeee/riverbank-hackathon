@@ -46,15 +46,20 @@ docker_config=''
 compose() {
     local directory=$1 selected_image=$2
     shift 2
+    local files=(-f "$directory/compose.yaml")
+    if [[ -f "$directory/compose.aws.yaml" ]]; then
+        files+=(-f "$directory/compose.aws.yaml")
+    fi
     API_IMAGE="$selected_image" docker compose \
         --project-name "$project" --env-file "$root/.env" \
-        -f "$directory/compose.yaml" "$@"
+        "${files[@]}" "$@"
 }
 
 check_health() {
     local attempt
     for ((attempt = 1; attempt <= 12; attempt++)); do
-        if curl --fail --silent --show-error --max-time 5 "$health_url"; then
+        if curl --fail --silent --show-error --max-time 5 "$health_url" \
+            && curl --fail --silent --show-error --max-time 20 "${health_url%/health}/ready"; then
             printf '\n'
             return 0
         fi
