@@ -1,0 +1,1867 @@
+{
+  "project": "Riverbank",
+  "source_of_truth": [
+    "AGENTS.md",
+    "Agents/README.md",
+    "Agents/NEXT_STEPS.md",
+    "Agents/SRS.md",
+    "Agents/GAPS.md",
+    "Agents/TEST_PLAN.md",
+    "Agents/AGENTS.md",
+    "Agents/API.md",
+    "Agents/SAD.md",
+    "Agents/DATA.md",
+    "database/riverbank-mini.dbml",
+    "database/README.md"
+  ],
+  "status_definitions": {
+    "done": "implemented and verified",
+    "in_progress": "partially implemented",
+    "pending": "not implemented",
+    "blocked": "requires an external decision or integration"
+  },
+  "constraints": [
+    "Chỉ người ngân hàng quyết định tín dụng hoặc duyệt cơ cấu",
+    "Code tính toàn bộ số; LLM không sửa số",
+    "Gap 0 bỏ PD, CIC và rule vay",
+    "Consent và seller/shop scope trước đọc nguồn",
+    "Che PII trước outbound; CSV dùng parser Python",
+    "Evidence và số memo khớp tuyệt đối",
+    "Điều khoản đổi bằng version mới, audit chỉ thêm",
+    "Policy chỉ được nạp sau khi test và người có thẩm quyền xác nhận",
+    "Không merge, deploy hoặc gọi dịch vụ thật nếu chưa được giao",
+    "Seller là người vay có ownership shop; underwriter là nhân sự ngân hàng trên lending platform một ngân hàng, không phải thành viên shop và không cần seller grant",
+    "OIDC xác thực danh tính; DB là nguồn quyền ứng dụng theo issuer/subject, role và ownership seller; OAuth consent đăng nhập không thay consent dữ liệu sàn",
+    "Tiền là integer VND theo AGENTS; schema DBML thiết kế không được ghi đè bất biến hoặc được coi là migration đã chạy",
+    "Không đưa thuộc tính nhạy cảm vào feature; không kết luận gian lận",
+    "LLM không viết hợp đồng, khế ước hoặc ủy nhiệm chi"
+  ],
+  "test_strategy": "Bổ sung và chạy kiểm thử nghiệp vụ mới ở TEST-01 cuối đợt triển khai; ngoại lệ bắt buộc: POL-01.07 chạy test candidate policy/rule trong môi trường cô lập và có người có thẩm quyền xác nhận trước khi loader cho phép nạp. Mọi task thiếu kiểm thử bắt buộc giữ in_progress, không done hoặc sẵn sàng PR; make test phải đạt trước tuyên bố sẵn sàng PR.",
+  "execution_rules": [
+    "Mỗi task lớn thực hiện trong một phiên Codex mới; subtask trong cùng task lớn có thể tiếp tục. Không tự bắt đầu task lớn khác trong phiên; bàn giao để người dùng mở phiên mới nếu không tự mở được.",
+    "Trước mỗi task/subtask đọc AGENTS.md có hiệu lực, mục task, documents của task cha và subtask, cùng tài liệu liên quan; kiểm tra working tree và giữ thay đổi có sẵn.",
+    "Theo chỉ dẫn người dùng và AGENTS.md trước; DBML là thiết kế cần đối chiếu SRS/SAD/API/DATA, không tự thay đổi policy hoặc bỏ version điều khoản.",
+    "Làm theo acceptance quan sát được, cập nhật progress/remaining/handoff; phân biệt thiết kế, code, migration đã chạy và tích hợp thực.",
+    "Ghi chính xác lệnh, môi trường, pass/skip/fail và lý do skip từ lần kiểm tra của task; không suy diễn kết quả kiểm thử từ phiên trước.",
+    "Chỉ người có thẩm quyền provision/enable/cấp quyền ngân hàng; đăng nhập thành công hoặc dữ liệu client không tự cấp role/ownership. Không commit secrets, token hoặc raw PII.",
+    "Ưu tiên nền logic lõi và contract API có thể làm độc lập trong CORE-01.30–31; hoãn cấu hình Auth0 tenant/provisioning CORE-01.18/.21 đến khi có thông tin. Không dỡ dependency/gate tích hợp và không cho phép truy cập dữ liệu thật hoặc endpoint nghiệp vụ không xác thực."
+  ],
+  "dependency_semantics": {
+    "depends_on": "Yêu cầu artifact triển khai hoặc quyết định liên quan trước khi tích hợp phần phụ thuộc; không yêu cầu task nguồn được gắn done trước TEST-01. Blocker quyết định bên ngoài vẫn phải được giải quyết trước hành động phụ thuộc.",
+    "subtasks": "Phụ thuộc cụ thể của subtask xác định phần được triển khai độc lập trong task cha. CORE-01 auth/nền API được làm sau BASE-01 mà chưa cần engine/policy/version hoàn tất.",
+    "integration_gates": "Các gate ở task cha áp dụng cho nối workflow/vận hành đầy đủ, không chặn phần nền độc lập; không bỏ qua gate policy approval hoặc quyền ngân hàng.",
+    "verification": "TEST-01 bắt đầu sau khi có artifact liên quan; task nguồn vẫn có thể in_progress chờ xác minh. Chỉ chuyển done khi đạt acceptance và kiểm thử bắt buộc, tránh vòng chờ done giữa task triển khai và TEST-01."
+  },
+  "tasks": [
+    {
+      "id": "BASE-01",
+      "priority": "P0",
+      "depends_on": [],
+      "status": "done",
+      "deliverables": [
+        "Môi trường Python có lockfile",
+        "make setup/test, CI và pre-commit"
+      ],
+      "acceptance": [
+        "Môi trường tái lập được",
+        "DB/model/network mode được ghi rõ",
+        "Kiểm tra chất lượng chạy được"
+      ],
+      "documents": [
+        "Agents/NEXT_STEPS.md",
+        "Agents/TEST_PLAN.md",
+        "Agents/SAD.md"
+      ],
+      "subtasks": [
+        {
+          "id": "BASE-01.01",
+          "status": "done",
+          "description": "Cấu hình Python 3.12, uv, pyproject.toml và lockfile cho môi trường tái lập."
+        },
+        {
+          "id": "BASE-01.02",
+          "status": "done",
+          "description": "Tạo Makefile với make setup và make test; cấu hình Ruff, format, pytest và pre-commit."
+        },
+        {
+          "id": "BASE-01.03",
+          "status": "done",
+          "description": "Tạo GitHub Actions CI chạy cùng kiểm tra chất lượng; không cấu hình tự merge/deploy."
+        },
+        {
+          "id": "BASE-01.04",
+          "status": "done",
+          "description": "Tài liệu hóa chế độ DB/model/network, secrets và lệnh chạy trên macOS/WSL/Linux."
+        }
+      ]
+    },
+    {
+      "id": "SRC-01",
+      "priority": "P1",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "Seller/shop, consent, payout, provenance và adapter demo",
+        "Scope sau xác thực và persistence khi nối workflow"
+      ],
+      "acceptance": [
+        "Không consent không đọc dữ liệu",
+        "Không trộn seller/shop",
+        "Dữ liệu synthetic có nhãn"
+      ],
+      "documents": [
+        "Agents/DATA.md",
+        "Agents/SRS.md",
+        "Agents/GAPS.md",
+        "Agents/NEXT_STEPS.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md"
+      ],
+      "subtasks": [
+        {
+          "id": "SRC-01.01",
+          "status": "in_progress",
+          "description": "Định nghĩa seller_id/shop_id và kiểm tra ownership, scope của actor đối với shop yêu cầu."
+        },
+        {
+          "id": "SRC-01.02",
+          "status": "in_progress",
+          "description": "Mô hình consent theo seller/shop, mục đích, thời gian hiệu lực và thu hồi; kiểm tra trước khi đọc nguồn."
+        },
+        {
+          "id": "SRC-01.03",
+          "status": "in_progress",
+          "description": "Định nghĩa payout VND nguyên, mức hỗ trợ sàn và provenance với nhãn synthetic rõ ràng."
+        },
+        {
+          "id": "SRC-01.04",
+          "status": "in_progress",
+          "description": "Tạo adapter dữ liệu demo offline; từ chối bản ghi trả về sai seller/shop."
+        },
+        {
+          "id": "SRC-01.05",
+          "status": "in_progress",
+          "description": "Tạo snapshot bất biến, hash payload/scope/provenance, lưu lịch sử snapshot theo case/run."
+        },
+        {
+          "id": "SRC-01.06",
+          "status": "pending",
+          "description": "Kết nối scope với actor đã xác thực và lưu consent/snapshot trong repository; thiết kế nhất quán khi consent bị thu hồi."
+        },
+        {
+          "id": "SRC-01.07",
+          "status": "blocked",
+          "description": "Chốt nguồn dữ liệu thực là seller export hay OpenAPI, quyền ủy quyền và contract trước adapter thực."
+        },
+        {
+          "id": "SRC-01.08",
+          "status": "blocked",
+          "description": "Chốt contract cấp, xem, thu hồi và cấp lại consent dữ liệu sàn: actor/ownership, mục đích, thời hạn, bằng chứng, giao diện tiếp nhận và quyền xem lịch sử sau thu hồi; phối hợp ngân hàng/pháp chế. Không giả định method/path hoặc coi OAuth consent là consent sàn.",
+          "depends_on": [
+            "SRC-01.02"
+          ],
+          "acceptance": [
+            "Quyết định ghi người có thẩm quyền, cách xác thực, vòng đời, hiệu lực, audit và trạng thái chưa chốt.",
+            "Chốt hành vi khi thu hồi đồng thời với lần đọc; quyền đọc snapshot lịch sử và thời gian lưu có quyết định riêng."
+          ],
+          "requirements_trace": [
+            "BR-01–BR-07",
+            "FR-05–FR-07"
+          ],
+          "implementation_steps": [
+            "Ngân hàng/pháp chế và đầu mối nguồn quyết định actor, ownership, mục đích, thời hạn, bằng chứng cấp và kênh tiếp nhận; phân biệt OAuth login với consent sàn.",
+            "Chốt hợp đồng thu hồi/cấp lại, idempotency, actor và đồng hồ server; xác định xử lý khi thu hồi đồng thời với đọc và khi đọc thất bại.",
+            "Quyết định riêng quyền xem snapshot lịch sử, retention và provenance; ghi rõ người phê duyệt, các điểm chưa chốt và giới hạn sử dụng nguồn.",
+            "Không giả định method/path, quyền đọc lịch sử, contract nguồn thực hay coi nhãn synthetic là bằng chứng consent."
+          ],
+          "verification_plan": [
+            "Kiểm tra contract với ngân hàng/pháp chế trước SRC-01.09; TEST-01.03/.10 kiểm các quyết định đã chốt."
+          ]
+        },
+        {
+          "id": "SRC-01.09",
+          "status": "pending",
+          "description": "Sau SRC-01.08 và CORE-01.24, xây contract/service/repository consent, audit và giao diện tiếp nhận đã chốt; nếu cần API thì thiết kế method/path và handler trong router theo CORE-01.25.",
+          "depends_on": [
+            "SRC-01.08",
+            "CORE-01.24",
+            "CORE-01.23"
+          ],
+          "acceptance": [
+            "Chỉ actor được phép thao tác đúng seller/shop và mục đích; mọi cấp/thu hồi có thời gian server, actor, provenance và audit chỉ thêm.",
+            "Thu hồi/hết hạn chặn lần đọc nguồn mới; xử lý race theo contract và không tự giả quyền đọc lịch sử; lỗi không tạo consent hợp lệ.",
+            "Thiết kế idempotency và transaction, giữ lịch sử grant, không nhận thời gian cấp/thu hồi do client tự quyết."
+          ],
+          "requirements_trace": [
+            "BR-01–BR-07",
+            "FR-05–FR-07",
+            "FR-38"
+          ],
+          "implementation_steps": [
+            "Sau SRC-01.08 và CORE-01.24, mô hình grant/version, seller/shop, purpose, thời hạn, bằng chứng, actor và provenance; tách cấp lại INSERT mới với lịch sử thu hồi.",
+            "Xây service/repository và giao diện đã chốt; kiểm actor đã xác thực và ownership phía server, thời gian server, audit chỉ thêm cùng transaction; không tự nhận grant từ client.",
+            "Áp contract khóa/race được chốt giữa thu hồi và đọc; thiếu/hết hạn/thu hồi, lỗi DB hoặc nguồn không khả dụng phải chặn đọc mới, không suy ra quyền đọc snapshot lịch sử.",
+            "Ràng buộc và kiểm case/run/snapshot đúng seller/shop và purpose; xác minh dữ liệu nguồn đúng scope trước lưu, nhãn synthetic không xác minh nguồn thật.",
+            "Quy định retry/idempotency và rollback cấp/thu hồi/snapshot; không triển khai adapter thực trước SRC-01.07/.10 hoặc gọi nguồn thật khi chưa được giao."
+          ],
+          "verification_plan": [
+            "TEST-01.03/.10 và Postgres: sai scope/purpose, thiếu/hết hạn/thu hồi/cấp lại, race, retry, rollback, quyền lịch sử và không gọi source khi không hợp lệ."
+          ]
+        },
+        {
+          "id": "SRC-01.10",
+          "status": "pending",
+          "description": "Sau SRC-01.07, xây adapter nguồn seller thực theo contract được ủy quyền, tách chế độ synthetic; không gọi nguồn thực nếu chưa được giao.",
+          "depends_on": [
+            "SRC-01.07",
+            "SRC-01.09"
+          ],
+          "acceptance": [
+            "Kiểm consent/scope trước đọc, kiểm nguồn trả đúng seller/shop, xác thực provenance và chuẩn hóa tiền VND nguyên.",
+            "Timeout, lỗi và nguồn thiếu fail closed; demo có nhãn synthetic và không dùng làm bằng chứng tích hợp thực."
+          ]
+        }
+      ],
+      "progress": [
+        "Đã có contract và adapter payout synthetic có scope, consent và provenance.",
+        "Thêm repository demo in-memory lưu snapshot bất biến theo case/run; tuần tự hóa thu hồi và lần đọc trong cùng instance.",
+        "Repository demo yêu cầu case/scope đăng ký trước; chặn consent cấp lại có thời điểm không sau lần thu hồi và kiểm tra lại grant sau đọc.",
+        "Reader kiểm lại ownership/consent sau đọc; repository demo ghi dấu thu hồi cả khi chưa có grant để chặn cấp ghi lùi.",
+        "Repository demo yêu cầu ánh xạ run/case đăng ký trước và từ chối consent có thời điểm cấp trong tương lai; chưa kiểm thử thay đổi mới."
+      ],
+      "remaining": [
+        "Nối actor/case/run từ workflow đã xác thực và repository lưu bền; chốt quyền đọc lịch sử sau thu hồi.",
+        "Chốt contract nguồn thực và thiết kế consent/thu hồi nguyên tử cho tích hợp thực.",
+        "Kiểm thử bổ sung và nghiệm thu tại TEST-01; chưa xác nhận hoàn tất.",
+        "Kiểm thử tại TEST-01: thu hồi khi chưa có grant, grant ghi lùi, hết hạn/thu hồi trong lúc đọc và race; reader độc lập không bảo đảm transaction hay cùng grant.",
+        "Kiểm thử tại TEST-01: run chưa đăng ký/sai case, grant ghi thời điểm tương lai và các luồng demo hợp lệ sau thay đổi constructor."
+      ]
+    },
+    {
+      "id": "ENG-01",
+      "priority": "P1",
+      "depends_on": [
+        "SRC-01"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "CashFlowEngine",
+        "FeatureBuilder dùng chung",
+        "PD với thiếu dữ liệu rõ ràng",
+        "CIC adapter và gate có điều kiện",
+        "Điều phối gap 0"
+      ],
+      "acceptance": [
+        "Golden A/B khớp",
+        "Gap 0 bỏ PD/CIC/rule",
+        "Thiếu dữ liệu xử lý fail closed"
+      ],
+      "progress": [
+        "CashFlowEngine implemented previously",
+        "Allowlisted payout features and PD interface added; no model configured",
+        "Standalone conditional CIC gate and synthetic adapter added; not wired to workflow",
+        "Preliminary gap-zero branch added; changes await tests"
+      ],
+      "remaining": [
+        "Verified PD model and shared training pipeline",
+        "Approved CIC contract and consent rules",
+        "Integration with policy and assessment workflow",
+        "Acceptance testing after implementation"
+      ],
+      "documents": [
+        "Agents/BUSINESS.md",
+        "Agents/SRS.md",
+        "Agents/SAD.md",
+        "Agents/DATA.md",
+        "policy/parameters.yaml",
+        "policy/worked-examples.md"
+      ],
+      "subtasks": [
+        {
+          "id": "ENG-01.01",
+          "status": "in_progress",
+          "description": "Hoàn thiện CashFlowEngine tính median payout, bảng cơ sở/xấu, gap, ngưỡng cảnh báo, đề xuất và lịch chia VND theo cấu hình được phép."
+        },
+        {
+          "id": "ENG-01.02",
+          "status": "pending",
+          "description": "Tính lịch counter và kéo dài kỳ hạn đến khi đạt trần trích hoặc ghi rõ không đạt; không ghi đè lịch cũ."
+        },
+        {
+          "id": "ENG-01.03",
+          "status": "in_progress",
+          "description": "Xây FeatureBuilder dùng chung train/serving từ dữ liệu có nguồn và loại bỏ thuộc tính nhạy cảm, hậu quả trả nợ."
+        },
+        {
+          "id": "ENG-01.04",
+          "status": "in_progress",
+          "description": "Định nghĩa inference PD theo basis points, model/version/provenance và kết quả thiếu hoặc lỗi fail closed."
+        },
+        {
+          "id": "ENG-01.05",
+          "status": "pending",
+          "description": "Xây pipeline model synthetic, lưu version/metrics và ghi rõ model chỉ minh họa, không phải PD được kiểm định trên khoản vay thật."
+        },
+        {
+          "id": "ENG-01.06",
+          "status": "in_progress",
+          "description": "Xây CIC gate và adapter demo: chỉ gọi khi gap dương, consent hợp lệ và đúng seller/shop; nhãn synthetic rõ."
+        },
+        {
+          "id": "ENG-01.07",
+          "status": "pending",
+          "description": "Nối assessment vào snapshot và cashflow; nhánh gap 0 trả NO_LOAN_NEEDED trước mọi lệnh gọi PD, CIC và rule."
+        },
+        {
+          "id": "ENG-01.08",
+          "status": "pending",
+          "description": "Với gap dương phát evidence E4/E5/E6/E6a, định tuyến thiếu PD sang người xử lý và không tạo quyết định tín dụng."
+        },
+        {
+          "id": "ENG-01.09",
+          "status": "pending",
+          "description": "Đối chiếu FX-A/B/E và parameter parity qua service thật trong TEST-01; không sửa golden để che regression."
+        }
+      ]
+    },
+    {
+      "id": "VER-01",
+      "priority": "P1",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "status": "pending",
+      "deliverables": [
+        "Migration và repository version điều khoản",
+        "Khóa đồng thời, rollback và audit"
+      ],
+      "acceptance": [
+        "INSERT version mới và SUPERSEDED bản trước",
+        "Lịch sử không thay đổi",
+        "Tách biệt cases.version"
+      ],
+      "documents": [
+        "Agents/DATA.md",
+        "Agents/SAD.md",
+        "Agents/SRS.md",
+        "Agents/GAPS.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md"
+      ],
+      "subtasks": [
+        {
+          "id": "VER-01.01",
+          "status": "blocked",
+          "description": "Chốt định danh version, trạng thái, thời điểm kích hoạt và thay thế với backend và đầu mối LOS. Đối chiếu schema mini chỉ có một final decision với lifecycle điều khoản bắt buộc; ghi phần cần mở rộng, không tự bỏ invariant."
+        },
+        {
+          "id": "VER-01.02",
+          "status": "pending",
+          "description": "Sau khi chốt VER-01.01, thiết kế/migrate loan_terms_versions gắn application và mapping API case, amount/tenor/schedule, nguồn thay đổi và ACTIVE/SUPERSEDED theo integer VND; phối hợp CORE-01.24 và thứ tự migration bảng cha, có rollback bảo toàn lịch sử.",
+          "depends_on": [
+            "VER-01.01",
+            "CORE-01.07"
+          ]
+        },
+        {
+          "id": "VER-01.03",
+          "status": "pending",
+          "description": "Xây repository transaction: INSERT điều khoản mới, đánh dấu bản ACTIVE trước SUPERSEDED, giữ nguyên lịch sử số và lịch trả."
+        },
+        {
+          "id": "VER-01.04",
+          "status": "pending",
+          "description": "Thực thi optimistic concurrency và ràng buộc tối đa một version ACTIVE; phân biệt terms version với cases.version và assessment run."
+        },
+        {
+          "id": "VER-01.05",
+          "status": "pending",
+          "description": "Ghi case_event chỉ thêm với actor, thời gian và liên kết version; bảo vệ rollback khi ghi thất bại."
+        },
+        {
+          "id": "VER-01.06",
+          "status": "pending",
+          "description": "Nối counter vào thẩm định lại và version mới; P7 chỉ kích hoạt version sau phê duyệt của ngân hàng."
+        }
+      ]
+    },
+    {
+      "id": "POL-01",
+      "priority": "P1",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "status": "blocked",
+      "deliverables": [
+        "Artifact policy và hash",
+        "Bằng chứng test và xác nhận",
+        "Loader fail closed"
+      ],
+      "acceptance": [
+        "Chặn bộ chưa được test, xác nhận hoặc hash lệch",
+        "Có audit người xác nhận"
+      ],
+      "external_dependencies": [
+        "Ngân hàng và tech lead chốt người có quyền xác nhận và bằng chứng xác nhận"
+      ],
+      "documents": [
+        "policy/policy.md",
+        "policy/parameters.yaml",
+        "Agents/BUSINESS.md",
+        "Agents/GAPS.md",
+        "Agents/SRS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "POL-01.01",
+          "status": "blocked",
+          "description": "Ngân hàng và tech lead chốt thẩm quyền xác nhận policy và hình thức bằng chứng phê duyệt."
+        },
+        {
+          "id": "POL-01.02",
+          "status": "pending",
+          "description": "Định nghĩa artifact policy version gồm văn bản, tham số, rule, hash và evidence test gắn đúng phiên bản.",
+          "requirements_trace": [
+            "BR-08–BR-15",
+            "FR-17–FR-20",
+            "FR-18"
+          ],
+          "implementation_steps": [
+            "Đặc tả artifact version bất biến gồm policy văn bản, tham số, rule/phiên bản engine, canonical hash, metadata hiệu lực và nguồn; không suy ngưỡng sản xuất từ ví dụ demo.",
+            "Gắn bằng chứng test có thể kiểm tra với đúng hash/version và bằng chứng người xác nhận theo contract POL-01.01; thay bất kỳ thành phần nào phải tạo artifact mới.",
+            "Ghi provenance/audit và phiên bản được dùng cho từng run; chốt hành vi khi hết hiệu lực hoặc bị thu hồi trước quyết định."
+          ],
+          "verification_plan": [
+            "POL-01.07: kiểm parameter parity, hash ổn định và phát hiện thay đổi; TEST-01.02 regression."
+          ]
+        },
+        {
+          "id": "POL-01.03",
+          "status": "pending",
+          "description": "Xây loader fail closed kiểm hash, kết quả test và bằng chứng người xác nhận hợp lệ trước khi nạp; không mặc định approval=true.",
+          "requirements_trace": [
+            "BR-08–BR-15",
+            "FR-17–FR-20",
+            "FR-18"
+          ],
+          "implementation_steps": [
+            "Xây loader fail closed kiểm tính toàn vẹn artifact/hash, schema, test evidence đạt và quyền/hiệu lực bằng chứng xác nhận do nguồn đáng tin cậy cung cấp.",
+            "Thiếu, lỗi, mismatch, test thất bại, xác nhận không hợp lệ/hết hiệu lực hoặc phụ thuộc không kiểm chứng được đều chặn nạp; không dùng cờ client hoặc mặc định approval=true.",
+            "Tách candidate/offline với runtime; ghi version/hash và kết quả audit khi nạp theo contract, không nạp demo chưa phê duyệt.",
+            "Yêu cầu chạy lại thẩm định nếu policy áp dụng không còn hiệu lực theo contract; không mở handler quyết định khi thiếu gate khác."
+          ],
+          "verification_plan": [
+            "POL-01.07: kiểm loader sai hash, thiếu/sai test và approval, xác nhận hết hiệu lực; có xác nhận thật của người có thẩm quyền trước nạp runtime."
+          ]
+        },
+        {
+          "id": "POL-01.04",
+          "status": "pending",
+          "description": "Lưu audit người xác nhận, thời gian và hash; yêu cầu thẩm định lại khi policy đã dùng không còn hiệu lực."
+        },
+        {
+          "id": "POL-01.05",
+          "status": "pending",
+          "description": "Implement candidate PolicyEngine R09, R01, R04, R08, R02, R03, R05, R06, R07, R10 để kiểm thử cô lập; loader runtime chỉ nạp artifact sau test và người xác nhận. Không nạp policy demo chưa được phép để nối workflow.",
+          "requirements_trace": [
+            "BR-08–BR-15",
+            "FR-16",
+            "FR-16b",
+            "FR-17–FR-20",
+            "FR-21–FR-23"
+          ],
+          "implementation_steps": [
+            "Triển khai engine candidate cô lập theo thứ tự R09, R01, R04, R08, R02, R03, R05, R06, R07, R10 và tham số artifact; không nạp vào runtime trước POL-01.07 và phê duyệt.",
+            "Tính rule bằng code và số nguyên/chính xác; liên kết từng kết quả với evidence và phiên bản policy, phân biệt hard fail, soft warning và thiếu dữ liệu.",
+            "Gap 0 bỏ PD/CIC và toàn bộ rule vay; R05 so ngưỡng và chứng từ đúng kỳ, R10 thiếu PD chuyển người/chặn chấp nhận nếu chưa có quy trình thay thế đã duyệt.",
+            "Chỉ thiếu R05 thì chờ chứng từ; hard fail hoặc sai lệch chuyển người, không tự ACCEPTED/REJECTED, không cho ghi chú bypass hard fail."
+          ],
+          "verification_plan": [
+            "POL-01.07: test candidate R01–R10, boundary R05, thiếu PD/CIC và parameter parity trước phê duyệt; TEST-01.02 regression."
+          ]
+        },
+        {
+          "id": "POL-01.06",
+          "status": "pending",
+          "description": "Phân biệt hard fail, soft warning, thiếu dữ liệu, R05 chờ chứng từ và R10 thiếu PD; không cho ghi chú bypass hard fail."
+        },
+        {
+          "id": "POL-01.07",
+          "status": "pending",
+          "description": "Chạy test candidate policy/rule và parameter parity trước xác nhận/nạp trong POL-01; lưu bằng chứng đúng hash/version và chuyển người có thẩm quyền xác nhận. TEST-01 chỉ bổ sung/regression, không trì hoãn cổng bắt buộc này đến cuối.",
+          "requirements_trace": [
+            "BR-08–BR-15",
+            "FR-17–FR-20",
+            "FR-18"
+          ],
+          "implementation_steps": [
+            "Trong môi trường cô lập chạy test candidate rule, boundary, missing data, golden phù hợp và parameter parity; lưu lệnh, môi trường, kết quả và hash/version artifact.",
+            "Chuyển đúng artifact cùng bằng chứng test cho người có thẩm quyền theo POL-01.01; ghi actor, thời gian và bằng chứng xác nhận đáng tin cậy.",
+            "Chỉ cho loader runtime nạp sau khi test đạt và người có thẩm quyền xác nhận cùng hash; khi thay nội dung phải test/xác nhận lại. Đây là ngoại lệ bắt buộc, không chờ TEST-01."
+          ],
+          "verification_plan": [
+            "Kiểm negative cases test fail, thiếu approval hoặc hash mismatch không nạp; TEST-01.02 bổ sung regression, không thay gate này."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-01",
+      "priority": "P1",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "API, auth, workflow và scope",
+        "Evidence, memo validator và sao kê",
+        "Quyết định người ngân hàng, audit và handoff",
+        "Migration auth, resolver quyền DB, provisioning/audit và phân biệt role nền tảng với ownership người vay"
+      ],
+      "acceptance": [
+        "A/B/C/E/F đạt TEST_PLAN",
+        "Idempotency và optimistic concurrency",
+        "Chỉ người ngân hàng quyết định",
+        "Evidence và số khớp",
+        "Seller chỉ truy cập shop sở hữu; underwriter nền tảng đọc queue/thẩm định/quyết định mà không cần grant shop; chỉ người ngân hàng được cấp quyền quyết định",
+        "Access token hợp lệ cho API, danh tính theo issuer/subject và quyền DB hiện hành; ID token và consent đăng nhập không thay access token hoặc consent sàn",
+        "Migration auth có unique/FK/CHECK/partial index, audit chỉ thêm và tuần tự hóa disable/revoke với quyết định; DBML export không chứng minh tích hợp",
+        "API /v1/cases giữ contract; persistence ánh xạ có tài liệu sang applications/application_events/version_no, không tự đổi endpoint theo tên bảng"
+      ],
+      "documents": [
+        "Agents/API.md",
+        "Agents/SRS.md",
+        "Agents/SAD.md",
+        "Agents/DATA.md",
+        "Agents/BUSINESS.md",
+        "knowledge/guardrails.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md",
+        "Agents/GAPS.md",
+        "Agents/TEST_PLAN.md"
+      ],
+      "subtasks": [
+        {
+          "id": "CORE-01.01",
+          "status": "in_progress",
+          "description": "Tạo FastAPI app, cấu hình CORS/secrets và adapter tách memory/PostgreSQL, demo/offline và môi trường thật."
+        },
+        {
+          "id": "CORE-01.02",
+          "status": "in_progress",
+          "description": "Hoàn thiện tích hợp resource server OIDC/OAuth 2.0 và GET /v1/auth/me từ verifier + resolver DB; tách role underwriter cấp lending platform khỏi ownership seller/shop. Phối hợp contract Authorization Code với PKCE S256/session với FE-01.02; code đăng nhập client thuộc FE-01.",
+          "depends_on": [
+            "CORE-01.18",
+            "CORE-01.19",
+            "CORE-01.20",
+            "CORE-01.21",
+            "CORE-01.22",
+            "CORE-01.23"
+          ],
+          "acceptance": [
+            "Mặc định fail closed; 401 cho token thiếu/sai, 503 khi chưa cấu hình hoặc không thể kiểm chứng; không tin role/scope client.",
+            "auth/me trả danh tính và quyền hiện hành từ DB, không trả token/secrets; assignment underwriter không cần ownership shop.",
+            "Đạt kiểm thử auth DB/API tại TEST-01 trước khi done; login client được nghiệm thu cùng FE-01.02."
+          ],
+          "progress": [
+            "Đã nối auth/me qua verifier Auth0 và resolver PostgreSQL khi cấu hình server đầy đủ; thiếu cấu hình trả 503.",
+            "auth/me trả đồng thời seller và underwriter nếu DB cấp cả hai; đã kiểm thử offline với resolver giả, không tự cấp quyền."
+          ],
+          "remaining": [
+            "Chốt cấu hình tenant/subject và provisioning; kiểm thử auth DB/API tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.03",
+          "status": "pending",
+          "description": "Implement POST /v1/copilot/extract-plan; guard injection/thuộc tính nhạy cảm, che PII trước outbound và chỉ trả draft để seller xác nhận.",
+          "depends_on": [
+            "CORE-01.02"
+          ]
+        },
+        {
+          "id": "CORE-01.04",
+          "status": "in_progress",
+          "description": "Implement POST /v1/cases; validate Plan, tổng lịch bằng lot, input caps, consent và scoped Idempotency-Key.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07",
+            "CORE-01.08"
+          ],
+          "requirements_trace": [
+            "BR-01–BR-15",
+            "FR-01–FR-20",
+            "FR-38"
+          ],
+          "implementation_steps": [
+            "Giữ endpoint 503 đến khi auth/ownership, guard, consent, nguồn, persistence và các dependency workflow tương ứng sẵn sàng; hoàn thiện schema request/response và lỗi đã chốt.",
+            "Nối server principal và seller/shop ownership; kiểm Plan/caps/input guard, sau đó thực thi idempotency và ghi actor/application/event trong transaction theo contract.",
+            "Chỉ đọc nguồn khi consent đúng mục đích, seller/shop còn hiệu lực; tạo snapshot/run/evidence đúng liên kết, tính cashflow bằng code.",
+            "Gap 0 trả NO_LOAN_NEEDED và không gọi PD/CIC/rule; gap dương chỉ đi tiếp qua adapter và policy đã test/phê duyệt, thiếu phụ thuộc fail closed; không tự quyết định tín dụng.",
+            "Định tuyến và trả trạng thái/evidence theo contract đã chốt, không cho lộ PD/CIC cho seller; giữ placeholder cho các nhánh chưa được triển khai."
+          ],
+          "verification_plan": [
+            "TEST-01.01/.03/.04/.10: A/B/C/E/F, consent/scope, auth, input guard, idempotency, rollback, gap 0 và thiếu policy/adapter."
+          ]
+        },
+        {
+          "id": "CORE-01.05",
+          "status": "pending",
+          "description": "Implement GET /v1/me/cases và GET /v1/cases/{case_id}/seller-view; chỉ seller sở hữu, không trả PD/CIC nội bộ.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07"
+          ]
+        },
+        {
+          "id": "CORE-01.06",
+          "status": "pending",
+          "description": "Implement GET /v1/queue, GET /v1/cases/{case_id} và evidence cho nhân sự ngân hàng có role underwriter nền tảng còn hiệu lực; không yêu cầu ownership/grant shop. Giữ liên kết evidence đúng application và phạm vi mini một ngân hàng.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07"
+          ]
+        },
+        {
+          "id": "CORE-01.07",
+          "status": "in_progress",
+          "description": "Sau CORE-01.24, tạo migration/repository business theo schema đã thống nhất: applications, assessment_runs, evidence, application_documents, generated_documents, decisions, handoffs và application_events; giữ API /v1/cases, ánh xạ case_id/version sang application_id/version_no, idempotency, lease, concurrency và audit chỉ thêm. Tái sử dụng sellers/auth baseline migration, không tạo bảng trùng.",
+          "depends_on": [
+            "CORE-01.19",
+            "CORE-01.24"
+          ],
+          "requirements_trace": [
+            "BR-05–BR-07",
+            "BR-16–BR-20",
+            "FR-05–FR-07",
+            "FR-29–FR-38",
+            "NFR-05"
+          ],
+          "implementation_steps": [
+            "Sau CORE-01.24, tạo migration business theo schema đã chốt, tái sử dụng baseline sellers/auth; thêm FK/CHECK/unique/index phù hợp và rollback có kế hoạch bảo toàn dữ liệu.",
+            "Xây repository PostgreSQL cho application, run, snapshot/evidence, document, decision và event theo phạm vi đã chốt; giữ integer VND và server timestamps.",
+            "Transaction tạo case gồm scope/actor, idempotency key, request hash, application và event; retry cùng key/payload trả cùng kết quả, khác payload conflict; định nghĩa phạm vi key theo contract.",
+            "Dùng expected_version và khóa/constraint cho cập nhật đồng thời; phân biệt version hồ sơ, assessment run và terms; event/audit chỉ thêm, không ghi đè evidence.",
+            "Đọc seller qua ownership server và underwriter qua role nền tảng; kiểm nested resource; quyết định chỉ ghi khi khóa lại identity/role trong transaction theo CORE-01.14.",
+            "Không nối workflow thật hay coi migration đã nghiệm thu khi chưa đạt gate, quyền DB và kiểm thử tích hợp."
+          ],
+          "verification_plan": [
+            "TEST-01.03/.05/.09/.10: DB cô lập, migration/rollback, quyền, FK/check, idempotency đồng thời, conflict, rollback giữa transaction, audit và scope."
+          ]
+        },
+        {
+          "id": "CORE-01.08",
+          "status": "in_progress",
+          "description": "Điều phối consent → snapshot → cashflow → gap 0 hoặc PD/CIC/policy; tạo evidence E4–E8 theo run, kiểm hash và provenance.",
+          "depends_on": [
+            "CORE-01.07",
+            "ENG-01",
+            "POL-01"
+          ],
+          "progress": [
+            "Đã thêm helper chuyển kết quả CashFlowEngine sang evidence E5 giữ nguyên số và lịch; chưa nối workflow hoặc lưu bền."
+          ],
+          "remaining": [
+            "Workflow phải xác thực liên kết case/run, snapshot và kết quả engine; nối E4–E8 sau các gate, kiểm thử evidence tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.09",
+          "status": "pending",
+          "description": "Định tuyến NO_LOAN_NEEDED, AWAITING_STATEMENT, PENDING_REVIEW hoặc ESCALATED theo kết quả; thiếu PD và hard fail không tự từ chối hay chấp nhận.",
+          "depends_on": [
+            "CORE-01.08"
+          ]
+        },
+        {
+          "id": "CORE-01.10",
+          "status": "pending",
+          "description": "Implement POST /v1/cases/{case_id}/statements với period, tổng nhập tay, nguồn và actor; đối chiếu payout sàn cùng kỳ theo R05.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07"
+          ]
+        },
+        {
+          "id": "CORE-01.11",
+          "status": "pending",
+          "description": "Implement POST /v1/cases/{case_id}/statements/upload: kiểm quyền/kích thước/định dạng; CSV parser Python, PDF chữ parser, scan/ảnh OCR có điều kiện.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07"
+          ]
+        },
+        {
+          "id": "CORE-01.12",
+          "status": "pending",
+          "description": "Implement POST /v1/cases/{case_id}/cic-inquiry cho underwriter; gate gap, consent, scope và adapter; không gọi CIC khi gap 0.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.08"
+          ]
+        },
+        {
+          "id": "CORE-01.13",
+          "status": "pending",
+          "description": "Xây memo composer/template và validator: claims/evidence_id hợp lệ, hash đúng, mọi số khớp 0 đồng, từ cấm và PII bị chặn; fallback theo cấu hình.",
+          "depends_on": [
+            "CORE-01.08"
+          ]
+        },
+        {
+          "id": "CORE-01.14",
+          "status": "pending",
+          "description": "Implement decisions chỉ cho người ngân hàng có identity enabled và assignment underwriter nền tảng còn hiệu lực; lưu actor_identity_id và authorization_role_assignment_id theo FK/CHECK. Kiểm/khóa quyền cùng transaction với version/decision/event để tuần tự hóa disable/revoke; idempotency, reason, hard fail không bypass, counter tính lại lịch/PD/policy và version điều khoản.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.07",
+            "CORE-01.08",
+            "CORE-01.13",
+            "VER-01"
+          ]
+        },
+        {
+          "id": "CORE-01.15",
+          "status": "pending",
+          "description": "Implement POST /v1/cases/{case_id}/handoff: kiểm quyết định hợp lệ/chưa hết hạn, lease/hash/idempotency, retry LOS không mất hoặc lặp quyết định.",
+          "depends_on": [
+            "CORE-01.14"
+          ]
+        },
+        {
+          "id": "CORE-01.16",
+          "status": "pending",
+          "description": "Implement GET /v1/studio/policy và GET /v1/studio/eval-metrics cho underwriter từ artifact/runtime hiện có; phân biệt mock với tích hợp thật.",
+          "depends_on": [
+            "CORE-01.02",
+            "POL-01"
+          ]
+        },
+        {
+          "id": "CORE-01.17",
+          "status": "pending",
+          "description": "Trả 401/403/422/413/415/429/503 và lỗi CASE_VERSION_CONFLICT, IDEMPOTENCY_KEY_REUSED, HARD_POLICY_FAILURE, BLOCKED_INPUT theo API contract.",
+          "depends_on": [
+            "CORE-01.01"
+          ]
+        },
+        {
+          "id": "CORE-01.18",
+          "status": "blocked",
+          "description": "Chốt provider/issuer allowlist, API audience, JWT hay opaque/introspection, thuật toán/key discovery và contract access-token subject ↔ OIDC subject; client/callback, PKCE S256, session/refresh/logout và thẩm quyền provisioning. Không coi lựa chọn OAuth/OIDC là đã chọn provider.",
+          "documents": [
+            "Agents/GAPS.md",
+            "Agents/API.md",
+            "database/README.md"
+          ],
+          "acceptance": [
+            "Có contract được ghi nhận cho backend và frontend, không chứa secrets.",
+            "Ngân hàng xác nhận cách cấp role underwriter và xác minh ownership seller; các mục chưa quyết định vẫn là blocker."
+          ],
+          "progress": [
+            "Đã chọn Auth0 và JWT RS256 cho hackathon.",
+            "Người dùng xác nhận hackathon dùng dữ liệu giả lập, cả bốn thành viên cần seller và underwriter; chưa xác định danh tính, shop và contract tenant."
+          ],
+          "remaining": [
+            "Chốt issuer, audience, client/callback, subject/azp, session và thẩm quyền provisioning với ngân hàng.",
+            "Tạm hoãn theo yêu cầu; không chặn thiết kế/service synthetic CORE-01.30–31 nhưng vẫn chặn tích hợp xác thực và mở endpoint nghiệp vụ thật."
+          ]
+        },
+        {
+          "id": "CORE-01.19",
+          "status": "in_progress",
+          "depends_on": [
+            "BASE-01"
+          ],
+          "description": "Tạo migration auth_identities, identity_roles, seller_access_grants, authorization_events cùng baseline sellers phục vụ FK; giữ một shop mỗi seller, định danh bất biến. Hiện thực unique issuer/subject với C collation, CHECK/FK tổ hợp seller-only ownership và actor underwriter, partial unique index grant chưa thu hồi, DB privileges/audit append-only và kế hoạch rollback.",
+          "acceptance": [
+            "Không có password/token/client secret trong các bảng nghiệp vụ; identity mới disabled và không có quyền.",
+            "Thứ tự migration tạo baseline sellers/auth trước business; không coi SQL export là migration vận hành.",
+            "Ràng buộc, rollback và lịch sử được kiểm chứng bằng Postgres tại TEST-01 trước done."
+          ],
+          "progress": [
+            "Đã có baseline auth/sellers, migration reader NOLOGIN và script rollback; migration reader chưa áp dụng."
+          ],
+          "remaining": [
+            "Hoàn thiện quyền runtime/control plane, audit transaction và kiểm chứng migration/rollback tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.20",
+          "status": "in_progress",
+          "depends_on": [
+            "CORE-01.19"
+          ],
+          "description": "Implement DB GrantResolver theo issuer/subject đã xác minh, identity enabled, thời hạn/thu hồi role và ownership. Roles gồm underwriter nền tảng; ScopedGrant chỉ biểu diễn seller/shop sở hữu. Đọc quyền hiện hành mỗi request, không ghép chéo role/ownership, không tự nối tài khoản bằng email hoặc cấp quyền từ token claims.",
+          "acceptance": [
+            "Identity lạ/disable không có quyền; lỗi DB không được trở thành xác thực thành công.",
+            "Underwriter hợp lệ không cần seller_access_grants; seller chỉ có scope ownership hợp lệ của đúng assignment.",
+            "Thu hồi/hết hạn/regrant không hồi sinh ownership cũ; subject khác issuer/case không bị nhập chung."
+          ],
+          "progress": [
+            "Đã có PostgreSQL GrantResolver; được nối cùng verifier khi cấu hình server đầy đủ."
+          ],
+          "remaining": [
+            "Kiểm thử quyền, hiệu lực, thu hồi/regrant và lỗi DB tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.21",
+          "status": "pending",
+          "depends_on": [
+            "CORE-01.18",
+            "CORE-01.19"
+          ],
+          "description": "Implement provisioning/control plane đã thống nhất: bootstrap đáng tin cậy, enable/disable identity, cấp/thu hồi role và ownership với authorization_events trong cùng transaction. Role seller/underwriter không cấp quyền tự quản trị; xác minh người ngân hàng và ownership trước cấp quyền.",
+          "acceptance": [
+            "Không tự thêm admin endpoint/role hoặc quyền từ đăng nhập; mọi thay đổi có actor/reason và audit.",
+            "Lịch sử không bị xóa, revoked_at một chiều, cấp lại INSERT mới; re-enable phải rà quyền giữ lại.",
+            "Disable/revoke tuần tự hóa với lệnh ghi dùng quyền theo cùng lock/transaction contract."
+          ]
+        },
+        {
+          "id": "CORE-01.22",
+          "status": "in_progress",
+          "depends_on": [
+            "CORE-01.18",
+            "CORE-01.01"
+          ],
+          "description": "Implement AccessTokenVerifier theo provider đã chốt: JWT hoặc opaque introspection, issuer/audience/thời hạn/chữ ký hoặc trạng thái active theo contract; không dùng ID token. Cấu hình operator tin cậy, timeout/key rotation theo provider và fail closed; không lấy issuer/key URL tin cậy từ token chưa xác minh.",
+          "acceptance": [
+            "Sai issuer/audience/chữ ký/hạn hoặc ID token bị từ chối; phụ thuộc không kiểm chứng được không cấp identity.",
+            "Không hard-code secret, token hoặc signing key; không ghi credentials vào log/response.",
+            "Contract subject trả về map chính xác auth_identities; cấu hình thiếu giữ API fail closed."
+          ],
+          "progress": [
+            "Đã có verifier Auth0 RS256, JWKS timeout/cache và cấu hình issuer/audience/client ID."
+          ],
+          "remaining": [
+            "Xác minh contract tenant và kiểm thử token, rotation/JWKS cùng API tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.23",
+          "status": "in_progress",
+          "depends_on": [
+            "CORE-01.20",
+            "CORE-01.22"
+          ],
+          "description": "Sửa helper/dependency hiện kiểm shop cho cả hai role: tách quyền nền tảng underwriter và ownership seller, nối auth/me và dependencies dùng chung cho API. Role/grant do resolver server cung cấp; nested resource đúng application và consent đọc nguồn vẫn riêng.",
+          "acceptance": [
+            "Principal.permits hoặc helper thay thế không đòi underwriter có shop grant, không cho role seller đọc queue/evidence nội bộ hoặc quyết định.",
+            "Seller không đọc/ghi shop khác; dưới mini một ngân hàng, underwriter không bị biến thành thành viên shop.",
+            "Danh tính hệ thống không được dùng thay người ngân hàng khi quyết định."
+          ],
+          "progress": [
+            "Đã tách quyền underwriter và ownership seller; auth/me dùng dependency xác thực chung."
+          ],
+          "remaining": [
+            "Nối quyền vào endpoint nghiệp vụ; kiểm nested resource, consent và transaction, kiểm thử tại TEST-01."
+          ]
+        },
+        {
+          "id": "CORE-01.24",
+          "status": "pending",
+          "description": "Đối chiếu schema business mini với AGENTS/SRS/API trước migration: loại mâu thuẫn numeric(18,2)/decimal strings với integer VND; ánh xạ cases/case_events/version sang applications/application_events/version_no; bổ sung contract lưu snapshot/consent, idempotency và handoff lease. Thống nhất version điều khoản với VER-01: không dùng một immutable final decision để bỏ lifecycle ACTIVE/SUPERSEDED hoặc ghi đè lịch cũ.",
+          "documents": [
+            "AGENTS.md",
+            "database/riverbank-mini.dbml",
+            "database/README.md",
+            "Agents/DATA.md",
+            "Agents/SRS.md",
+            "Agents/API.md",
+            "Agents/GAPS.md"
+          ],
+          "acceptance": [
+            "Schema, model và JSON dùng tiền VND nguyên, không âm thầm làm tròn tiền lẻ hoặc đổi invariant.",
+            "Có mapping DB/API và migration ownership rõ; không đổi path /v1/cases theo tên applications.",
+            "Contract version còn phụ thuộc VER-01.01 phải được chốt trước phần liên quan; auth baseline có thể triển khai độc lập, business migration giữ gate đến khi schema thống nhất."
+          ],
+          "depends_on": [
+            "VER-01.01"
+          ],
+          "requirements_trace": [
+            "BR-01–BR-07",
+            "BR-16–BR-20",
+            "FR-05–FR-07",
+            "FR-32–FR-38",
+            "NFR-02",
+            "NFR-05"
+          ],
+          "implementation_steps": [
+            "Đối chiếu DBML với SRS/API/DATA: xác định integer VND, không làm tròn tiền lẻ; mapping /v1/cases ↔ applications, version ↔ version_no và case_events ↔ application_events.",
+            "Đặc tả liên kết seller/shop, consent, snapshot, run, evidence, document, decision, idempotency và handoff/lease; bảo đảm nested resource thuộc cùng application/run.",
+            "Sau VER-01.01 thống nhất lifecycle terms ACTIVE/SUPERSEDED, phân biệt case version và assessment run; không suy rằng một final decision bất biến thay thế version điều khoản.",
+            "Ghi quyền DB, thứ tự migration/rollback và owner auth/business; không coi draft SQL hoặc volume local là migration được nghiệm thu."
+          ],
+          "verification_plan": [
+            "Review schema/contract với backend và đầu mối LOS; TEST-01.09/.10 kiểm migration/rollback, constraints, tiền nguyên và lịch sử."
+          ]
+        },
+        {
+          "id": "CORE-01.25",
+          "status": "in_progress",
+          "description": "Tổ chức endpoint theo module APIRouter trong api/routers; tách schema, service và adapter/repository, main.py chỉ cấu hình ứng dụng và include router. Triển khai endpoint theo bản đồ trong Agents/API.md và các subtask CORE-01.02–17; luồng mở rộng giữ task, contract và gate riêng.",
+          "depends_on": [
+            "CORE-01.01"
+          ],
+          "acceptance": [
+            "Mọi HTTP handler, kể cả auth/me và health, nằm trong module router theo chức năng; main.py chỉ lắp app, middleware, cấu hình và include_router, không định nghĩa handler.",
+            "Giữ method/path và contract đã chốt; router chuyển xử lý sang service/dependency, không chứa policy, tính toán nghiệp vụ, truy vấn DB hoặc tích hợp ngoài trực tiếp.",
+            "Mỗi endpoint có schema và quyền server phù hợp; kiểm ownership/nested resource và consent nguồn riêng, underwriter dùng role nền tảng, không tin role hoặc scope từ client.",
+            "Tạo case, assessment, evidence, sao kê, CIC, quyết định và handoff chỉ được nối khi các gate và dependency tương ứng đã đáp ứng; không bật policy chưa test và xác nhận, không giả kết quả thành công khi thiếu phụ thuộc.",
+            "Kiểm thử HTTP, OpenAPI, đường thành công/lỗi/quyền, idempotency và conflict theo TEST-01; chưa đánh dấu hoàn thành khi chưa đạt kiểm thử bắt buộc."
+          ],
+          "documents": [
+            "Agents/API.md",
+            "Agents/SAD.md",
+            "Agents/SRS.md",
+            "Agents/NEXT_STEPS.md",
+            "Agents/TEST_PLAN.md"
+          ],
+          "progress": [
+            "Đã chuyển health/db và auth/me sang router riêng, đưa kiểm tra kết nối DB sang service; giữ contract và dependency hiện có.",
+            "Đã khai báo schema phản hồi auth/me cho OpenAPI, gồm role nền tảng và scoped grant seller.",
+            "Kiểm thử HTTP offline auth/me, health/db và OpenAPI thành công qua ASGI; make test 47 passed trên macOS.",
+            "Các path lõi theo SRS đã đăng ký placeholder fail closed 503, có xác thực/kiểm role; POST case kiểm thêm seller/shop từ grant server.",
+            "Đã chuyển 51 file người dùng cung cấp từ api/services/services lên api/services; giữ 17 file nền trước đó tại api/services/foundation và cập nhật caller/import. Không bật workflow mới; pytest hiện hữu 49 passed trên macOS/Python 3.12.16."
+          ],
+          "remaining": [
+            "Các endpoint nghiệp vụ chỉ triển khai sau gate tương ứng; còn kiểm thử quyền trên resource, idempotency, conflict và tích hợp theo TEST-01.",
+            "Placeholder chưa thực hiện workflow, chưa có body schema cho đa số route và chưa kiểm resource; cần nối implementation sau gate và kiểm thử HTTP tại TEST-01.",
+            "Bộ service mới còn thiếu module hỗ trợ/config/policy/DB pool/model assets và dependency; Ruff toàn bộ service nhập mới còn 45 lỗi. Phải đối chiếu SRS/OIDC, consent, policy approval, version và schema trước tích hợp; xem api/services/README.md."
+          ]
+        },
+        {
+          "id": "CORE-01.26",
+          "status": "pending",
+          "description": "Thiết kế và triển khai input guard cho đường tạo case tách với Copilot; tích hợp vào CORE-01.04 trước lưu hoặc outbound.",
+          "depends_on": [
+            "CORE-01.02"
+          ],
+          "acceptance": [
+            "Validate cấu trúc/cap và tổng lịch bằng giá trị lô; input bị chặn trả lỗi contract, không lưu case.",
+            "Chặn injection và thuộc tính nhạy cảm theo guardrail; che SĐT, CCCD, tài khoản trước outbound; lỗi guard fail closed và không log PII.",
+            "Không để LLM quyết định hoặc sửa số; lưu actor/scope, idempotency theo contract sau khi qua guard."
+          ],
+          "requirements_trace": [
+            "BR-01–BR-04",
+            "FR-01–FR-04",
+            "NFR-04"
+          ],
+          "implementation_steps": [
+            "Đặc tả riêng contract guard tạo case và Copilot, thứ tự xác thực → schema/giới hạn do server cung cấp → guard → persistence hoặc outbound; không tin config, role hay scope client.",
+            "Tái sử dụng Plan: số VND nguyên, không âm, tổng lịch bằng giá trị lô và tuần trong kỳ; áp caps đã được phép, giới hạn kích thước và lỗi 422/BLOCKED_INPUT theo API.",
+            "Xây cơ chế kiểm injection, ép duyệt và thuộc tính nhạy cảm theo guardrail/ngưỡng được phép; tách kết quả block và lỗi phụ thuộc, fail closed; không lưu hoặc gọi model khi block.",
+            "Che SĐT, CCCD và số tài khoản trước mọi outbound; không log raw PII hay ghi lại payload nguy hiểm trong lỗi; không để model thay số hoặc quyết định.",
+            "Nối vào service tạo case trước bất kỳ side effect; giữ placeholder 503 nếu guard, cấu hình hoặc các gate workflow khác chưa sẵn sàng."
+          ],
+          "verification_plan": [
+            "TEST-01.04/.10: case F, biến thể injection và PII, cap boundary, integer VND, lịch sai, lỗi guard, không outbound/lưu khi block; kiểm riêng Copilot và case."
+          ]
+        },
+        {
+          "id": "CORE-01.27",
+          "status": "pending",
+          "description": "Thiết kế và triển khai xử lý sao kê sau tiếp nhận, bao gồm phân loại, đối chiếu, lưu provenance và thẩm định lại theo contract.",
+          "depends_on": [
+            "CORE-01.10",
+            "CORE-01.11",
+            "CORE-01.08"
+          ],
+          "acceptance": [
+            "CSV dùng parser Python; PDF chữ dùng parser, ảnh/scan OCR có điều kiện; Jev phân loại và Python cộng tổng; outbound được che PII.",
+            "Lưu actor, kỳ, nguồn, validation, tổng nguyên VND và E8; không tự xác nhận thu ngoài sàn khi payout sàn khớp.",
+            "Xác minh cùng kỳ, phân biệt lỗi đọc/thiếu dữ liệu/không khớp; re-assessment tạo run/evidence/event mới, giữ lịch sử và không tự quyết định tín dụng.",
+            "Quyền và retention file gốc phụ thuộc quyết định ngân hàng/pháp chế; không tự lưu bản gốc khi chưa chốt."
+          ]
+        },
+        {
+          "id": "CORE-01.28",
+          "status": "pending",
+          "description": "Tạo và quản lý memo ngân hàng cùng bản giải thích seller trên evidence đã khóa, phối hợp CORE-01.13 và seller-view.",
+          "depends_on": [
+            "CORE-01.13",
+            "CORE-01.05",
+            "CORE-01.07"
+          ],
+          "acceptance": [
+            "Hai bản cùng tham chiếu evidence hợp lệ đúng case/run và số khớp tuyệt đối, không thêm lãi/phí; seller không nhận PD/CIC nội bộ.",
+            "Lưu attempt, validation và version tài liệu theo run; không phát hành bản chưa validate; lỗi/fallback theo guardrail và giới hạn attempt cấu hình.",
+            "Lender/seller đọc đúng quyền, giữ lịch sử và kiểm hash/claims trước phát hành; không dùng LLM viết hợp đồng."
+          ]
+        },
+        {
+          "id": "CORE-01.29",
+          "status": "pending",
+          "description": "Chi tiết hóa repository/transaction cho từng luồng: tạo case/idempotency/event; consent/snapshot/run/evidence; statement/document; decision/terms; handoff/lease.",
+          "depends_on": [
+            "CORE-01.24",
+            "CORE-01.07",
+            "VER-01.01"
+          ],
+          "acceptance": [
+            "Đặc tả khóa, unique, phạm vi idempotency, expected_version, actor, audit chỉ thêm và liên kết case/run/scope cho từng thao tác.",
+            "Đảm bảo transaction/rollback cho ghi liên quan; giữ lịch sử, không ghi đè evidence và không mất quyết định khi LOS lỗi.",
+            "Có migration/rollback và kiểm thử đồng thời, lỗi giữa transaction và quyền DB tại TEST-01; không xem draft SQL là migration nghiệm thu."
+          ],
+          "requirements_trace": [
+            "BR-16–BR-20",
+            "FR-29–FR-38",
+            "NFR-05"
+          ],
+          "implementation_steps": [
+            "Đặc tả ranh giới transaction, khóa và thứ tự khóa cho create/idempotency/event; consent/snapshot/run/evidence; statement/document; decision/terms; handoff/lease.",
+            "Với từng lệnh ghi xác định actor, scope, expected_version, unique key, dữ liệu bất biến, commit/rollback và hành vi retry; bảo đảm disable/revoke tuần tự hóa với quyết định.",
+            "Ràng buộc case/run/scope và evidence, kiểm resource tại server; lịch sử điều khoản INSERT mới, bản trước SUPERSEDED theo VER-01; không mất quyết định khi LOS lỗi.",
+            "Sau schema được chốt, triển khai theo các repository/task liên quan, migration/rollback và DB privilege; không coi đặc tả hoặc draft là tích hợp."
+          ],
+          "verification_plan": [
+            "TEST-01.03/.05/.09/.10: race, revoke/disable, version conflict, retry/replay, lỗi giữa transaction, audit append-only và LOS lỗi."
+          ]
+        },
+        {
+          "id": "CORE-01.30",
+          "status": "in_progress",
+          "description": "Xây service lõi độc lập cho assessment từ Plan hợp lệ và dữ liệu synthetic đã cung cấp, tái sử dụng CashFlowEngine và contract hiện có; tách orchestration khỏi HTTP, không tự tạo hoặc xác nhận nguồn, không gọi dịch vụ ngoài.",
+          "depends_on": [
+            "CORE-01.01"
+          ],
+          "documents": [
+            "Agents/BUSINESS.md",
+            "Agents/SRS.md",
+            "Agents/SAD.md",
+            "Agents/DATA.md",
+            "Agents/API.md",
+            "Agents/NEXT_STEPS.md"
+          ],
+          "acceptance": [
+            "Tiền, gap, kỳ hạn và lịch do code hiện có tính; dữ liệu đầu vào synthetic được gắn nhãn và không giả chứng minh consent hoặc provenance.",
+            "Gap bằng 0 dừng nhánh vay, không gọi PD, CIC hay policy; không tự quyết định tín dụng.",
+            "Gap dương fail closed khi thiếu adapter, consent hoặc policy hợp lệ; không nạp policy chưa test và người có thẩm quyền xác nhận.",
+            "Service chỉ dùng nội bộ/fixture, chưa mở API nghiệp vụ hoặc lưu dữ liệu thật; ghi giới hạn và kiểm thử theo TEST-01."
+          ],
+          "progress": [
+            "Service fixture nhận Plan, caps, cấu hình và SourceRecord synthetic do caller cung cấp; kiểm scope và dùng CashFlowEngine. Gap dương trả INCOMPLETE, không gọi PD/CIC/policy; không đọc nguồn hay xác nhận consent."
+          ],
+          "remaining": [
+            "Kiểm thử nghiệp vụ theo TEST-01; consent, provenance, policy và workflow thực vẫn chưa được tích hợp."
+          ]
+        },
+        {
+          "id": "CORE-01.31",
+          "status": "in_progress",
+          "description": "Thiết kế và xây schema request/response và mapping lỗi cho API lõi theo Agents/API.md, dùng service tách biệt và fixture synthetic để chuẩn bị tích hợp; không bật endpoint nghiệp vụ khi chưa đủ gate.",
+          "depends_on": [
+            "CORE-01.01",
+            "CORE-01.25"
+          ],
+          "documents": [
+            "Agents/API.md",
+            "Agents/SRS.md",
+            "Agents/SAD.md",
+            "Agents/TEST_PLAN.md",
+            "Agents/NEXT_STEPS.md"
+          ],
+          "acceptance": [
+            "Schema mô tả integer VND, validate input, trạng thái và lỗi theo contract; không tính lại số ở router hoặc frontend.",
+            "Không tin role/scope từ client; auth/ownership, consent và nested resource vẫn là gate trước khi bật route thực.",
+            "Không giả thành công khi thiếu persistence, policy hoặc adapter; không tự mở route truy cập dữ liệu thật.",
+            "Ghi rõ phần schema/service đã có, phần endpoint còn chờ và kiểm thử hợp đồng tại TEST-01."
+          ],
+          "progress": [
+            "Thêm schema request Plan, response fixture dòng tiền và envelope lỗi contract; mapping lỗi idempotency đã có domain type. Không đăng ký route."
+          ],
+          "remaining": [
+            "Chốt response case và mapping lỗi còn lại theo workflow; kiểm thử contract tại TEST-01, sau đó nối auth/consent/persistence khi đủ gate."
+          ]
+        }
+      ],
+      "progress": [
+        "Đã tạo FastAPI app và cấu hình CORS origin tường minh; mặc định không cho cross-origin.",
+        "GET /v1/auth/me dùng dependency xác thực; thiếu bearer trả 401, thiếu cấu hình auth trả 503; không tin role hoặc scope từ client.",
+        "CORE-01.02: contract verifier và nguồn grant theo issuer/subject; app mặc định fail closed khi chưa cấu hình, chưa kiểm thử.",
+        "CORE-01.02: thiết kế DBML danh tính, role, ownership và audit; baseline auth và resolver đã được thêm, chưa nghiệm thu.",
+        "Đã thêm model Plan bất biến, kiểm kiểu số VND, lịch trả bằng lô/trong kỳ và hàm kiểm input cap từ cấu hình caller cung cấp; chưa kết nối endpoint.",
+        "Thêm repository case in-memory một process: tạo case cùng event, idempotency theo seller, đọc theo seller/shop; chưa có ghi version hay lưu bền.",
+        "Thêm envelope evidence E4–E8 bất biến, kiểm case/run và hash nội dung; chưa tạo evidence từ workflow hoặc xác thực nguồn.",
+        "Đã tách auth DB/provider/provisioning/permission helper thành CORE-01.18–23 và bổ sung gate đối chiếu schema business CORE-01.24.",
+        "CORE-01.19: thêm SQL baseline sellers/auth và Docker Compose local; health endpoint chỉ kiểm kết nối; business repository DB chưa có.",
+        "Thêm SQL nháp cho chín bảng business tại database/drafts; đã áp dụng thủ công vào volume local, chưa phải migration chính thức hay repository tích hợp.",
+        "CORE-01.20: PostgresGrantResolver đọc quyền theo issuer/subject và được nối tùy cấu hình; chưa kiểm thử PostgreSQL.",
+        "CORE-01.19: thêm migration 002 cho role NOLOGIN chỉ đọc các cột resolver cần và script thu hồi tương ứng; chưa áp dụng database hiện có hoặc cấp membership.",
+        "CORE-01.23: tách helper role underwriter nền tảng và ownership seller/shop; auth/me dùng dependency xác thực, endpoint nghiệp vụ và kiểm thử còn thiếu.",
+        "CORE-01.02/23: nối GET /v1/auth/me qua dependency xác thực dùng chung; thêm kiểm role underwriter và helper kiểm ownership seller từ principal/scope do server cung cấp, chưa mở endpoint nghiệp vụ.",
+        "CORE-01.22: thêm verifier Auth0 RS256 cho API audience và một client ID, JWKS timeout/cache và nối resolver DB khi cấu hình server đầy đủ; chưa cấu hình tenant hoặc kiểm thử.",
+        "CORE-01.08: thêm helper tạo E5 từ kết quả dòng tiền có sẵn; chưa xác minh nguồn, nối workflow hay lưu bền.",
+        "CORE-01.25: chuyển health/db và auth/me sang router; kiểm tra DB nằm trong service, chưa kiểm thử HTTP/OpenAPI.",
+        "Nghiệm thu từng phần HTTP foundation offline: make test 47 passed; chưa xác nhận provider/DB thật hoặc nghiệm thu CORE-01.",
+        "Hackathon: yêu cầu bốn thành viên đều có seller và underwriter; auth/me hỗ trợ hai role, thêm cấu hình CORS tường minh. Chưa provision bốn identity.",
+        "Ưu tiên tiếp theo: xây service lõi và schema API độc lập bằng dữ liệu synthetic; cấu hình tenant Auth0 và cấp quyền bốn thành viên hoãn lại.",
+        "CORE-01.30–31: thêm assessment fixture synthetic và schema/mapping nội bộ; chưa mở endpoint, chưa kiểm thử nghiệp vụ.",
+        "Đã công bố path lõi SRS dưới dạng placeholder có xác thực/role; mọi workflow nghiệp vụ trả 503 WORKFLOW_UNAVAILABLE, không đọc/lưu hay xử lý dữ liệu. POST case kiểm seller ownership và schema Plan trước 503."
+      ],
+      "remaining": [
+        "Chốt OIDC issuer, audience, token/subject, provisioning/control plane và session; hoàn thiện và kiểm thử verifier, migration/resolver DB, kiểm role/ownership trước khi mở API nghiệp vụ.",
+        "Hoàn tất ENG-01, VER-01, POL-01 và persistence; sau đó nối workflow, evidence, memo, sao kê, quyết định và handoff.",
+        "Bổ sung và chạy kiểm thử ở TEST-01; chưa nghiệm thu CORE-01.",
+        "Nối Plan với cấu hình được phép, giới hạn request, guard, actor/scope, consent và idempotency trước khi mở POST /v1/cases.",
+        "Hoàn thiện migration/PostgreSQL, concurrency, audit bền và ràng buộc quyền trước khi tích hợp repository.",
+        "Nối evidence với run và provenance, xây memo validator và kiểm thử; hash không xác thực nguồn.",
+        "Thực hiện CORE-01.18–24 và acceptance tương ứng; thiết kế schema chưa thay thế migration, resolver hay kiểm thử tích hợp.",
+        "Kiểm chứng baseline auth trên PostgreSQL, bổ sung DB privileges/runtime role, provisioning và audit transaction; business migration vẫn chờ CORE-01.24/VER-01.01.",
+        "Chốt CORE-01.24/VER-01.01 và hoàn thiện contract version, snapshot/JSON, idempotency/lease, quyền và kiểm thử trước business migration.",
+        "Kiểm thử CORE-01.20 tại TEST-01: identity/role/grant, thời hạn, thu hồi/regrant, lỗi DB, so sánh issuer/subject và truy vấn đồng thời; chưa kiểm thử tích hợp verifier hoặc endpoint nghiệp vụ.",
+        "Kiểm TEST-01 migration/rollback 002 và quyền hiệu lực, gồm PUBLIC, membership, ownership, superuser và schema; chưa có login runtime hoặc control plane, không coi migration là phân quyền hoàn chỉnh.",
+        "Nối helper vào dependency/API sau verifier CORE-01.22 và kiểm nested resource, identity người ra quyết định, consent riêng và transaction tại TEST-01; helper không tự kiểm các điều kiện đó.",
+        "Kết nối dependencies tới endpoint nghiệp vụ sau khi có verifier và workflow/persistence đã chốt; bảo đảm nested resource, consent và kiểm khóa quyền trong transaction; kiểm thử tại TEST-01.",
+        "Xác minh contract access-token subject ↔ OIDC subject, audience/azp và loại token của tenant Auth0, provisioning/control plane, session; kiểm thử verifier, rotation/JWKS, DB và HTTP tại TEST-01 trước nghiệm thu.",
+        "Thực hiện CORE-01.30–31 trước; sau đó nối endpoint thật chỉ khi auth/ownership, consent, persistence và gate nghiệp vụ tương ứng đã sẵn sàng.",
+        "TEST-01: kiểm fixture A/B/E, scope, loại dữ liệu, caps, gap 0, nhánh gap dương fail closed và schema/mapping; response fixture không phải contract case cuối.",
+        "Thay placeholder bằng handler thực sau khi hoàn tất dependency, gate và contract từng route; bổ sung schema body, kiểm ownership/nested resource, consent và transaction; kiểm thử HTTP tại TEST-01.",
+        "Kế hoạch triển khai chi tiết guard, consent, persistence, policy và tích hợp case nằm trong implementation_steps/verification_plan của CORE-01.26/.24/.07/.29/.04, SRC-01.08/.09 và POL-01.02/.03/.05/.07; đối chiếu BRD/SRS trước mỗi bước."
+      ],
+      "integration_gates": [
+        "ENG-01",
+        "VER-01",
+        "POL-01",
+        "CORE-01.24"
+      ],
+      "external_dependencies": [
+        "Provider/issuer, API audience, JWT hay opaque, contract subject, client/callback, session/logout và control plane provisioning tại CORE-01.18 chưa được chốt.",
+        "Không nối workflow hoặc chạy business migration khi CORE-01.24 chưa thống nhất schema với integer VND, version điều khoản và contract API."
+      ]
+    },
+    {
+      "id": "FE-01",
+      "priority": "P1",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "status": "pending",
+      "deliverables": [
+        "Next.js seller, lender và studio",
+        "Typed API client, auth và conflict handling"
+      ],
+      "acceptance": [
+        "A/B/C/E/F qua UI",
+        "Đúng role và scope",
+        "Không tự tính tiền hay lãi phí",
+        "Seller chỉ có luồng người vay/shop sở hữu; underwriter có luồng lending platform không yêu cầu liên kết shop; mọi quyết định và quyền lấy từ server"
+      ],
+      "documents": [
+        "Agents/API.md",
+        "Agents/SRS.md",
+        "Agents/NEXT_STEPS.md",
+        "Agents/BRD.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md",
+        "Agents/GAPS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "FE-01.01",
+          "status": "blocked",
+          "description": "Chốt package Next.js, môi trường API, provider OAuth/OIDC, cấu hình client/callback và session với frontend/tech lead."
+        },
+        {
+          "id": "FE-01.02",
+          "status": "pending",
+          "description": "Khởi tạo Next.js và typed API client; implement login OIDC/OAuth 2.0 Authorization Code với PKCE S256, state/nonce, callback và session/refresh/logout theo contract đã chốt. Dùng access token cho API, không dùng ID token; UI role/ownership lấy từ auth/me.",
+          "depends_on": [
+            "FE-01.01",
+            "CORE-01.02"
+          ]
+        },
+        {
+          "id": "FE-01.03",
+          "status": "pending",
+          "description": "Tạo form seller nhập kế hoạch, consent, xem draft Copilot và submit POST /v1/cases với Idempotency-Key."
+        },
+        {
+          "id": "FE-01.04",
+          "status": "pending",
+          "description": "Tạo danh sách và seller-view bằng GET /v1/me/cases và /v1/cases/{case_id}/seller-view; không yêu cầu evidence nội bộ."
+        },
+        {
+          "id": "FE-01.05",
+          "status": "pending",
+          "description": "Tạo lender queue/detail cho underwriter trên lending platform, không yêu cầu có shop; xem evidence/rule/nguồn/nhãn mô phỏng từ API và không tự quyết định quyền ở client."
+        },
+        {
+          "id": "FE-01.06",
+          "status": "pending",
+          "description": "Tạo màn chứng từ, CIC inquiry và quyết định/counter; gửi expected_version và idempotency key, hiển thị kết quả server tính."
+        },
+        {
+          "id": "FE-01.07",
+          "status": "pending",
+          "description": "Tạo nút handoff và trạng thái retry; xử lý version conflict, 401/403/422/503 và lỗi policy theo API."
+        },
+        {
+          "id": "FE-01.08",
+          "status": "pending",
+          "description": "Tạo Studio đọc /v1/studio/policy và /v1/studio/eval-metrics động, không hard-code rule/ngưỡng."
+        },
+        {
+          "id": "FE-01.09",
+          "status": "pending",
+          "description": "Hiển thị chưa có lãi/phí khi ngân hàng chưa cung cấp; không tính gap, lãi, lịch hoặc quyết định ở client."
+        }
+      ]
+    },
+    {
+      "id": "DOC-01",
+      "priority": "P1",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "Duy trì BRD/SRS/SAD/API/DATA",
+        "Truy vết acceptance và test"
+      ],
+      "acceptance": [
+        "Contract thống nhất",
+        "FR có acceptance và test truy vết"
+      ],
+      "documents": [
+        "Agents/README.md",
+        "Agents/BRD.md",
+        "Agents/SRS.md",
+        "Agents/SAD.md",
+        "Agents/API.md",
+        "Agents/DATA.md",
+        "Agents/GAPS.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md",
+        "Agents/SRS_GAP_ANALYSIS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "DOC-01.01",
+          "status": "in_progress",
+          "description": "Đối chiếu BRD, BUSINESS, SRS, SAD, DATA và API với implementation thực tế; sửa đường dẫn/tuyên bố không còn đúng."
+        },
+        {
+          "id": "DOC-01.02",
+          "status": "in_progress",
+          "description": "Lập truy vết BR/FR sang endpoint, component, acceptance và test tương ứng; phân biệt đã làm với thiết kế."
+        },
+        {
+          "id": "DOC-01.03",
+          "status": "pending",
+          "description": "Ghi các quyết định mở, chủ sở hữu và ảnh hưởng tại GAPS; cập nhật khi có xác nhận nghiệp vụ."
+        },
+        {
+          "id": "DOC-01.04",
+          "status": "in_progress",
+          "description": "Cập nhật README, NEXT_STEPS và tasklist theo tiến độ, mode demo/production và giới hạn xác minh."
+        }
+      ],
+      "progress": [
+        "Đã bổ sung ma trận flow_design và task/acceptance chi tiết cho các khoảng trống về consent, nguồn, guard, sao kê, memo, persistence và endpoint mở rộng; đây là thiết kế backlog, chưa nghiệm thu triển khai.",
+        "2026-10-31: hợp nhất SRS 1.2 từ SRS 1.1 đính kèm, giữ 41 FR nghiệp vụ và 6 NFR, bổ sung 6 AUTH OAuth 2.0/OIDC và 2 CONSIST; phân tích gap tại Agents/SRS_GAP_ANALYSIS.md. Đã đối chiếu BRD và giữ các bất biến, không kế thừa bảng code đạt lịch sử."
+      ],
+      "remaining": [
+        "Đối chiếu từng BR/FR tới implementation và kết quả test thực theo DOC-01.01–.02; cập nhật contract mở sau quyết định có thẩm quyền.",
+        "Nghiệm thu từng FR trên implementation thực; chốt các contract ngoài team tại GAPS. SRS hợp nhất và phân tích gap là yêu cầu đích, không chứng minh flow hoặc policy đã đạt."
+      ]
+    },
+    {
+      "id": "QA-01",
+      "priority": "P2",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "status": "pending",
+      "deliverables": [
+        "Copilot hỏi lại theo evidence mới nhất"
+      ],
+      "acceptance": [
+        "Đúng seller, che PII trước outbound",
+        "Không đổi số hay lộ PD/CIC cho seller"
+      ],
+      "documents": [
+        "Agents/NEXT_STEPS.md",
+        "Agents/API.md",
+        "knowledge/prompts/copilot-qa.md",
+        "knowledge/guardrails.md"
+      ],
+      "subtasks": [
+        {
+          "id": "QA-01.01",
+          "status": "pending",
+          "description": "Chốt method/path, request/response và auth cho route copilot/ask trước khi triển khai; API tài liệu chỉ nêu tên route mở rộng."
+        },
+        {
+          "id": "QA-01.02",
+          "status": "pending",
+          "description": "Lấy evidence mới nhất đúng case và seller đã xác thực; không đưa PD/CIC nội bộ vào context seller."
+        },
+        {
+          "id": "QA-01.03",
+          "status": "pending",
+          "description": "Che SĐT, CCCD và tài khoản trước mọi outbound; chặn injection, thuộc tính nhạy cảm và lỗi model theo guardrail."
+        },
+        {
+          "id": "QA-01.04",
+          "status": "pending",
+          "description": "Dùng prompt QA với số đã khóa; validator từ chối số mới hoặc evidence sai, fallback an toàn khi không trả lời được."
+        },
+        {
+          "id": "QA-01.05",
+          "status": "pending",
+          "description": "Sau khi chốt QA-01.01, triển khai API copilot/ask bằng router, service và truy xuất evidence; không tự đặt method/path khi contract chưa chốt.",
+          "depends_on": [
+            "QA-01.01",
+            "QA-01.02",
+            "QA-01.03",
+            "QA-01.04",
+            "CORE-01.25"
+          ],
+          "acceptance": [
+            "Chỉ seller sở hữu truy cập case; context không chứa PD/CIC nội bộ và được che PII trước outbound.",
+            "Trả câu trả lời đã validate trên evidence mới nhất hoặc fallback an toàn; không tạo số, quyết định hay ghi đè evidence."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EXP-01",
+      "priority": "P2",
+      "depends_on": [
+        "VER-01",
+        "CORE-01"
+      ],
+      "status": "blocked",
+      "deliverables": [
+        "Chặn handoff quá hạn",
+        "Tái thẩm định và audit"
+      ],
+      "acceptance": [
+        "Run mới giữ evidence cũ",
+        "Consent/CIC theo hiệu lực được chốt"
+      ],
+      "external_dependencies": [
+        "Ngân hàng chốt hiệu lực CIC và consent"
+      ],
+      "documents": [
+        "Agents/NEXT_STEPS.md",
+        "Agents/SRS.md",
+        "Agents/API.md",
+        "Agents/GAPS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "EXP-01.01",
+          "status": "pending",
+          "description": "Kiểm hạn quyết định trước POST /v1/cases/{case_id}/handoff và trả lỗi yêu cầu tái thẩm định khi đã hết hạn."
+        },
+        {
+          "id": "EXP-01.02",
+          "status": "blocked",
+          "description": "Chốt hiệu lực CIC, consent và điều kiện dữ liệu mới với ngân hàng trước khi triển khai tái thẩm định."
+        },
+        {
+          "id": "EXP-01.03",
+          "status": "pending",
+          "description": "Thiết kế contract yêu cầu tái thẩm định và role; không tự giả định endpoint khi chưa đặc tả."
+        },
+        {
+          "id": "EXP-01.04",
+          "status": "pending",
+          "description": "Tạo assessment run, snapshot, evidence và event mới; giữ nguyên lịch sử run cũ và yêu cầu quyết định hợp lệ mới."
+        },
+        {
+          "id": "EXP-01.05",
+          "status": "pending",
+          "description": "Sau quyết định hiệu lực và contract tái thẩm định, triển khai API yêu cầu tái thẩm định trong router và service/repository theo contract.",
+          "depends_on": [
+            "EXP-01.02",
+            "EXP-01.03",
+            "EXP-01.04",
+            "CORE-01.25"
+          ],
+          "acceptance": [
+            "Kiểm actor, scope, trạng thái, version và idempotency theo contract đã chốt; chỉ lấy dữ liệu khi consent/CIC hợp lệ.",
+            "Run/snapshot/evidence/event mới không sửa lịch sử; yêu cầu quyết định hợp lệ mới trước handoff."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DATA-01",
+      "priority": "P2",
+      "depends_on": [],
+      "status": "blocked",
+      "deliverables": [
+        "Phân biệt payout sàn với thu ngoài sàn",
+        "Fixture và routing"
+      ],
+      "acceptance": [
+        "Khớp payout sàn không chứng minh thu ngoài sàn"
+      ],
+      "external_dependencies": [
+        "Nghiệp vụ và rủi ro chốt nguồn xác minh"
+      ],
+      "documents": [
+        "Agents/NEXT_STEPS.md",
+        "Agents/GAPS.md",
+        "Agents/BUSINESS.md",
+        "policy/worked-examples.md"
+      ],
+      "subtasks": [
+        {
+          "id": "DATA-01.01",
+          "status": "blocked",
+          "description": "Nghiệp vụ và rủi ro chốt nguồn xác minh doanh thu ngoài sàn và điều kiện sử dụng."
+        },
+        {
+          "id": "DATA-01.02",
+          "status": "pending",
+          "description": "Mở rộng contract dữ liệu/evidence tách payout sàn, thu ngoài sàn, kỳ đối chiếu và provenance từng nguồn."
+        },
+        {
+          "id": "DATA-01.03",
+          "status": "pending",
+          "description": "Đối chiếu sao kê với payout sàn cùng kỳ; không kết luận nguồn thu ngoài sàn chỉ vì tổng sàn khớp."
+        },
+        {
+          "id": "DATA-01.04",
+          "status": "pending",
+          "description": "Thiết kế routing xác minh và fixture Case D theo quyết định nghiệp vụ đã chốt."
+        }
+      ]
+    },
+    {
+      "id": "OBS-01",
+      "priority": "P2",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "status": "pending",
+      "deliverables": [
+        "Meter theo case/model/retry",
+        "Báo cáo latency/cost"
+      ],
+      "acceptance": [
+        "Đo offline và online riêng",
+        "Không log PII"
+      ],
+      "documents": [
+        "Agents/SRS.md",
+        "Agents/TEST_PLAN.md",
+        "Agents/NEXT_STEPS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "OBS-01.01",
+          "status": "pending",
+          "description": "Instrument thời gian theo case và từng bước/model, lần gọi, retry, timeout và fallback mà không log raw PII/secrets."
+        },
+        {
+          "id": "OBS-01.02",
+          "status": "pending",
+          "description": "Ghi model/version, token hoặc đơn vị tính và chi phí theo cấu hình thực cho mỗi case."
+        },
+        {
+          "id": "OBS-01.03",
+          "status": "pending",
+          "description": "Xuất báo cáo demo tách offline và online, timestamp, cấu hình, số case, percentile/trung bình và nguồn giá."
+        },
+        {
+          "id": "OBS-01.04",
+          "status": "pending",
+          "description": "Đo NFR latency/cost bằng workload thật; không suy SLA online từ thời gian pytest."
+        }
+      ]
+    },
+    {
+      "id": "P7-01",
+      "priority": "P3",
+      "depends_on": [
+        "VER-01",
+        "POL-01"
+      ],
+      "status": "blocked",
+      "deliverables": [
+        "Tính phương án bằng code và evidence",
+        "Phê duyệt version mới bởi nhân sự ngân hàng"
+      ],
+      "acceptance": [
+        "ACTIVE không đổi trước duyệt",
+        "Không tự cơ cấu",
+        "Retry/idempotency đúng"
+      ],
+      "external_dependencies": [
+        "Policy và BL-11 được ngân hàng chốt"
+      ],
+      "documents": [
+        "Agents/NEXT_STEPS.md",
+        "Agents/GAPS.md",
+        "Agents/BUSINESS.md",
+        "knowledge/prompts/monitor-proposal.md"
+      ],
+      "subtasks": [
+        {
+          "id": "P7-01.01",
+          "status": "blocked",
+          "description": "Ngân hàng/rủi ro chốt BL-11, policy trích thiếu và điều kiện đề xuất cơ cấu."
+        },
+        {
+          "id": "P7-01.02",
+          "status": "pending",
+          "description": "Thiết kế contract sự kiện P7, xác thực và idempotency trước khi triển khai simulate-p7-event."
+        },
+        {
+          "id": "P7-01.03",
+          "status": "pending",
+          "description": "Tính phương án tiền/kỳ hạn/lịch bằng code theo policy đã xác nhận; tạo evidence D22 và đề xuất riêng, không thay lịch ACTIVE."
+        },
+        {
+          "id": "P7-01.04",
+          "status": "pending",
+          "description": "Thiết kế và triển khai restructure-decision theo contract đã chốt; chỉ nhân sự ngân hàng duyệt/từ chối phương án."
+        },
+        {
+          "id": "P7-01.05",
+          "status": "pending",
+          "description": "Sau duyệt tạo version RESTRUCTURED_P7 mới theo VER-01, SUPERSEDED bản cũ và audit actor; đảm bảo retry/concurrency."
+        },
+        {
+          "id": "P7-01.06",
+          "status": "pending",
+          "description": "Sau khi contract sự kiện P7 và policy được chốt, triển khai endpoint sự kiện trong router cùng service và persistence đề xuất/audit.",
+          "depends_on": [
+            "P7-01.01",
+            "P7-01.02",
+            "P7-01.03",
+            "CORE-01.25"
+          ],
+          "acceptance": [
+            "Xác thực nguồn sự kiện, kiểm scope/idempotency/replay theo contract và ghi provenance.",
+            "Tính phương án bằng code theo policy đã xác nhận; lưu đề xuất/evidence riêng, không thay lịch ACTIVE hoặc tự duyệt."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BANK-01",
+      "priority": "later",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "status": "blocked",
+      "deliverables": [
+        "CIC/LOS adapter sandbox với auth"
+      ],
+      "acceptance": [
+        "Scope, consent và retry đúng",
+        "Không trình bày mock như tích hợp thật"
+      ],
+      "external_dependencies": [
+        "Contract và sandbox ngân hàng"
+      ],
+      "documents": [
+        "Agents/SAD.md",
+        "Agents/API.md",
+        "Agents/GAPS.md",
+        "Agents/NEXT_STEPS.md"
+      ],
+      "subtasks": [
+        {
+          "id": "BANK-01.01",
+          "status": "blocked",
+          "description": "Nhận contract CIC/LOS, sandbox, auth, consent, scope, thời hạn kết quả và quy định retry từ ngân hàng."
+        },
+        {
+          "id": "BANK-01.02",
+          "status": "pending",
+          "description": "Implement CIC adapter theo contract đã chốt, tách demo/mock và xác thực nguồn/response đúng seller/shop."
+        },
+        {
+          "id": "BANK-01.03",
+          "status": "pending",
+          "description": "Implement LOS adapter và handoff mapping theo contract, có idempotency, lease, retry và trạng thái tách khỏi quyết định."
+        },
+        {
+          "id": "BANK-01.04",
+          "status": "pending",
+          "description": "Chỉ implement webhook LOS sau khi chốt endpoint, xác thực, replay protection và mapping trạng thái."
+        },
+        {
+          "id": "BANK-01.05",
+          "status": "pending",
+          "description": "Tích hợp secrets manager/IAM và tài liệu sandbox; không commit credentials, không gọi hệ thống thật nếu chưa được giao."
+        }
+      ]
+    },
+    {
+      "id": "TEST-01",
+      "priority": "last",
+      "depends_on": [
+        "ENG-01",
+        "VER-01",
+        "POL-01",
+        "CORE-01",
+        "FE-01",
+        "OBS-01"
+      ],
+      "status": "in_progress",
+      "progress": [
+        "Đã bổ sung kiểm thử offline assessment A/B/E, risk, quyền, CIC, token Auth0, idempotency, evidence và consent demo; pytest 45 passed trên macOS.",
+        "HTTP offline auth/me và health/db, OpenAPI: make test 47 passed, 0 skipped, 0 failed trên macOS/Python 3.12.16."
+      ],
+      "remaining": [
+        "make test đạt 47 passed; chưa nghiệm thu hoặc sẵn sàng PR vì các acceptance và tích hợp còn thiếu.",
+        "Thiếu test tích hợp PostgreSQL, provider/JWKS thực, HTTP, policy approval, workflow, memo, UI, LOS và latency/cost; hoàn thành các phụ thuộc và acceptance tương ứng trước khi đóng TEST-01."
+      ],
+      "deliverables": [
+        "Bổ sung test theo TEST_PLAN",
+        "Chạy make test và kiểm thử tích hợp phù hợp",
+        "Ghi pass/skip/fail, môi trường và blocker"
+      ],
+      "acceptance": [
+        "Các kịch bản bắt buộc có bằng chứng",
+        "Policy được test trước khi nạp",
+        "Không tuyên bố hoàn tất khi thiếu kiểm thử"
+      ],
+      "documents": [
+        "Agents/TEST_PLAN.md",
+        "Agents/SRS.md",
+        "Agents/NEXT_STEPS.md",
+        "policy/worked-examples.md",
+        "database/riverbank-mini.dbml",
+        "database/README.md",
+        "Agents/API.md",
+        "knowledge/guardrails.md"
+      ],
+      "subtasks": [
+        {
+          "id": "TEST-01.01",
+          "status": "in_progress",
+          "description": "Bổ sung test CashFlowEngine, FeatureBuilder, PD, CIC gate và golden A/B/E qua service; gap 0 không gọi PD/CIC/rule."
+        },
+        {
+          "id": "TEST-01.02",
+          "status": "pending",
+          "description": "Bổ sung/regression policy R01–R10, R05 boundary, R10 thiếu PD và loader thiếu test/approval/hash lệch. Bằng chứng test/phê duyệt ban đầu thuộc POL-01.07 và phải có trước runtime nạp policy, không chờ TEST-01."
+        },
+        {
+          "id": "TEST-01.03",
+          "status": "in_progress",
+          "description": "Bổ sung test consent/scope, quyền người vay và underwriter nền tảng, idempotency, version conflict, concurrency/audit. Token sai issuer/audience/chữ ký, hết hạn, ID token hoặc không kiểm chứng được bị chặn; OAuth consent không thay consent sàn. Seller không quyết định hoặc đọc shop khác; underwriter không cần shop ownership."
+        },
+        {
+          "id": "TEST-01.04",
+          "status": "in_progress",
+          "description": "Bổ sung test memo claims/hash/số/từ cấm, guard injection/PII và CSV/PDF/scan với lỗi OCR/classifier."
+        },
+        {
+          "id": "TEST-01.05",
+          "status": "pending",
+          "description": "Bổ sung test decision/counter, terms version, rollback, handoff expiry và LOS lỗi/retry; không tự quyết định tín dụng."
+        },
+        {
+          "id": "TEST-01.06",
+          "status": "pending",
+          "description": "Kiểm thử UI A/B/C/E/F và lỗi quyền/conflict sau FE-01; tách test offline, Postgres và sandbox."
+        },
+        {
+          "id": "TEST-01.07",
+          "status": "in_progress",
+          "description": "Chạy make test và kiểm thử tích hợp khả dụng; ghi môi trường, lệnh, số pass/skip/fail và lý do skip."
+        },
+        {
+          "id": "TEST-01.08",
+          "status": "pending",
+          "description": "Đo latency/cost riêng theo OBS-01 và ghi rõ các phụ thuộc hoặc điều kiện nghiệm thu chưa thực hiện.",
+          "depends_on": [
+            "OBS-01"
+          ]
+        },
+        {
+          "id": "TEST-01.09",
+          "status": "pending",
+          "description": "Kiểm thử migration/resolver/provisioning auth trên Postgres: unique issuer/subject phân biệt case, subject 255 ký tự; identity disable, role/grant thiếu/hết hạn/thu hồi, regrant không hồi sinh ownership; partial index, FK/CHECK đúng actor underwriter và seller-only ownership, audit append-only/rollback. Race quyết định với disable/revoke và login/session PKCE theo provider; ghi offline/DB/sandbox và blocker riêng.",
+          "depends_on": [
+            "CORE-01.02",
+            "CORE-01.19",
+            "CORE-01.20",
+            "CORE-01.21",
+            "CORE-01.23",
+            "FE-01.02"
+          ]
+        },
+        {
+          "id": "TEST-01.10",
+          "status": "pending",
+          "description": "Bổ sung kiểm thử HTTP, service và persistence theo flow_design, gồm consent, guard case, hai memo, sao kê và các endpoint mở rộng đã có contract.",
+          "depends_on": [
+            "CORE-01.25"
+          ],
+          "acceptance": [
+            "Bao phủ role/ownership, consent, dữ liệu sai scope, retry, race/rollback, lịch sử, validate memo và thiếu phụ thuộc fail closed.",
+            "Chỉ kiểm thử luồng mở rộng sau khi có contract/artifact tương ứng; báo blocker, môi trường và kết quả riêng; không thay POL-01.07."
+          ]
+        }
+      ]
+    }
+  ],
+  "flow_design": {
+    "purpose": "Ma trận thiết kế và truy vết task; task tham chiếu là kế hoạch, không đồng nghĩa đã triển khai. API mở rộng và nguồn thật chỉ thực hiện sau contract/quyết định cần thiết.",
+    "scope": "Theo BRD/SRS hiện có; P0 định danh thực, P4 hợp đồng, P5 giải ngân, P6 trích tiền và P8 thu hồi là trách nhiệm ngân hàng/core; P7 là mở rộng.",
+    "router_rule": "Handler HTTP nằm trong api/routers; main chỉ lắp router; service/schema/repository và adapter tách module theo CORE-01.25.",
+    "flows": [
+      {
+        "id": "AUTH",
+        "flow": "Đăng nhập và quyền",
+        "api": "OIDC PKCE và GET /v1/auth/me; FE-01.02; CORE-01.02/.18/.22/.23/.25",
+        "logic": "Verifier/resource server; role server-side, seller ownership, underwriter nền tảng",
+        "repository": "CORE-01.19–.21: identity, role, grant, audit",
+        "gates_and_tests": "CORE-01.18 và xác nhận provisioning; TEST-01.03/.09",
+        "acceptance": "Token không hợp lệ hoặc không kiểm chứng được bị chặn; seller chỉ thao tác shop sở hữu, underwriter hợp lệ không cần grant shop."
+      },
+      {
+        "id": "CONSENT",
+        "flow": "Consent và nguồn seller",
+        "api": "Chốt giao diện SRC-01.08; triển khai sau quyết định SRC-01.09",
+        "logic": "SRC-01.01–.04/.08–.10; phân biệt OAuth consent",
+        "repository": "SRC-01.05–.06/.09 và CORE-01.24/.29: consent, snapshot, lịch sử và race",
+        "gates_and_tests": "Nguồn thật SRC-01.07; retention/quyền lịch sử chưa chốt; TEST-01.03/.10",
+        "acceptance": "Thiếu/hết hạn/thu hồi consent chặn đọc nguồn; scope, provenance và lịch sử phù hợp contract đã chốt."
+      },
+      {
+        "id": "PLAN",
+        "flow": "Kế hoạch và tạo hồ sơ",
+        "api": "CORE-01.03–.04/.25; FE-01.03",
+        "logic": "CORE-01.26 guard; Plan/cap và idempotency; CORE-01.08 điều phối",
+        "repository": "CORE-01.07/.29: case, scope, key và event trong transaction",
+        "gates_and_tests": "Auth, consent, CORE-01.24 và các gate workflow; TEST-01.03/.04/.10",
+        "acceptance": "Plan hợp lệ và guard đạt mới tạo case; retry cùng key/payload không tạo case thứ hai, key khác payload báo lỗi."
+      },
+      {
+        "id": "ASSESS",
+        "flow": "Cashflow và risk",
+        "api": "POST /v1/cases; CORE-01.04/.08–.09/.12",
+        "logic": "ENG-01.01/.03–.08; gap 0 bỏ PD/CIC/rule; gap dương chạy các gate và không tự quyết định",
+        "repository": "CORE-01.07–.08/.29: run, snapshot, E4–E7 và provenance",
+        "gates_and_tests": "ENG-01, POL-01, VER-01, CORE-01.24; TEST-01.01–.03",
+        "acceptance": "Gap 0 trả NO_LOAN_NEEDED và không gọi PD/CIC/rule; gap dương có evidence đúng run, thiếu PD chuyển người."
+      },
+      {
+        "id": "POLICY",
+        "flow": "Policy và routing",
+        "api": "CORE-01.08–.09/.16; Studio chỉ đọc",
+        "logic": "POL-01.01–.07: candidate rule, test, phê duyệt và loader fail closed",
+        "repository": "POL-01.02/.04 và CORE-01.07: artifact/version/hash, approval audit và kết quả theo run",
+        "gates_and_tests": "Ngân hàng xác nhận sau test POL-01.07; TEST-01.02 regression",
+        "acceptance": "Không nạp policy thiếu test hoặc xác nhận; hard fail không bị bypass và không tự từ chối tín dụng."
+      },
+      {
+        "id": "STATEMENT",
+        "flow": "Chứng từ và thẩm định lại",
+        "api": "CORE-01.10–.11/.25; seller hoặc underwriter theo từng route",
+        "logic": "CORE-01.27: parser/OCR/classifier, Python cộng, đối chiếu cùng kỳ, run mới",
+        "repository": "CORE-01.07/.27/.29: metadata, kết quả, E8, run và audit",
+        "gates_and_tests": "Chốt retention file; không chứng minh thu ngoài sàn; TEST-01.04/.10",
+        "acceptance": "Sao kê được xử lý theo định dạng và đối chiếu cùng kỳ; run mới giữ lịch sử, lỗi không trở thành xác minh thành công."
+      },
+      {
+        "id": "MEMO",
+        "flow": "Memo ngân hàng và bản seller",
+        "api": "CORE-01.05–.06; CORE-01.25",
+        "logic": "CORE-01.13/.28: hai bản cùng evidence, validator và fallback",
+        "repository": "CORE-01.07/.28–.29: generated documents, attempt, claims, version và validation",
+        "gates_and_tests": "Không phát hành khi sai số/hash hoặc chưa validate; TEST-01.04/.10",
+        "acceptance": "Hai bản chỉ dùng evidence hợp lệ, khớp mọi số; seller không thấy PD/CIC, bản lỗi không phát hành."
+      },
+      {
+        "id": "DECISION",
+        "flow": "Queue, quyết định và counter",
+        "api": "CORE-01.06/.14/.25; FE-01.05–.06",
+        "logic": "Underwriter quyết định; counter chạy lại lịch/PD/policy; CORE-01.14, ENG-01.02",
+        "repository": "CORE-01.07/.29 và VER-01.02–.06: decision, actor, terms, run, audit",
+        "gates_and_tests": "POL-01, VER-01.01 và kiểm/khóa quyền cùng transaction; TEST-01.03/.05",
+        "acceptance": "Chỉ underwriter còn quyền quyết định; counter tính lại, version điều khoản và audit không ghi đè lịch sử."
+      },
+      {
+        "id": "HANDOFF",
+        "flow": "Bàn giao và audit",
+        "api": "CORE-01.15/.25; FE-01.07; BANK-01.04 webhook sau contract",
+        "logic": "EXP-01.01 hạn quyết định; BANK-01.03 LOS mapping/retry",
+        "repository": "CORE-01.07/.24/.29: decision, handoff, lease, hash, event chỉ thêm",
+        "gates_and_tests": "LOS contract BANK-01.01 và policy/version; TEST-01.05",
+        "acceptance": "Chỉ bàn giao quyết định hợp lệ/chưa hết hạn; retry an toàn và lỗi LOS không làm mất quyết định."
+      },
+      {
+        "id": "QA",
+        "flow": "Seller hỏi lại",
+        "api": "QA-01.01/.05 sau contract",
+        "logic": "QA-01.02–.04: evidence mới nhất, PII, validator/fallback",
+        "repository": "Đọc evidence đúng case/run từ CORE-01.07; không sửa evidence",
+        "gates_and_tests": "QA-01 sau CORE-01; TEST-01.10",
+        "acceptance": "Seller chỉ hỏi hồ sơ sở hữu; trả lời có evidence, không lộ PII/PD/CIC hoặc thêm số."
+      },
+      {
+        "id": "EXPIRY",
+        "flow": "Hết hạn và tái thẩm định",
+        "api": "EXP-01.01/.03/.05 sau contract",
+        "logic": "EXP-01.02/.04: hiệu lực, consent/CIC, tái thẩm định",
+        "repository": "EXP-01.04 và CORE-01.29: run/snapshot/evidence/event mới",
+        "gates_and_tests": "Ngân hàng chốt hiệu lực; TEST-01.05/.10",
+        "acceptance": "Hồ sơ hết hạn không handoff; tái thẩm định giữ lịch sử và yêu cầu quyết định mới."
+      },
+      {
+        "id": "OFF_PLATFORM",
+        "flow": "Doanh thu ngoài sàn case D",
+        "api": "Không tự đặt API; DATA-01 chốt contract theo nguồn và routing",
+        "logic": "DATA-01.01–.04: tách nguồn và xác minh",
+        "repository": "DATA-01.02 và CORE-01.07: provenance/evidence theo nguồn, sau khi chốt",
+        "gates_and_tests": "Nghiệp vụ/rủi ro chốt nguồn; fixture và test riêng",
+        "acceptance": "Khớp payout sàn không tự chứng minh doanh thu ngoài sàn; chỉ routing theo nguồn được chốt."
+      },
+      {
+        "id": "P7",
+        "flow": "Monitor và cơ cấu",
+        "api": "P7-01.02/.04/.06; contract sự kiện và quyết định phải chốt",
+        "logic": "P7-01.01/.03–.05: đề xuất bằng code, nhân sự ngân hàng duyệt",
+        "repository": "VER-01.02–.05 và P7-01.05–.06: đề xuất, evidence, version và audit",
+        "gates_and_tests": "BL-11 và policy ngân hàng xác nhận; TEST-01.05/.10",
+        "acceptance": "Không thay lịch ACTIVE trước duyệt; chỉ người ngân hàng duyệt version mới theo policy đã xác nhận."
+      },
+      {
+        "id": "OBS",
+        "flow": "Latency, chi phí và vận hành",
+        "api": "Báo cáo theo OBS-01.03; không tự giả định endpoint",
+        "logic": "OBS-01.01–.04: đo theo case/model, retry, chi phí",
+        "repository": "Lưu hoặc xuất dữ liệu đo theo thiết kế OBS; không log PII",
+        "gates_and_tests": "Đo offline/online riêng; TEST-01.08",
+        "acceptance": "Báo cáo tách offline/online, ghi cấu hình và chi phí có nguồn, không log raw PII."
+      }
+    ]
+  },
+  "implementation_handoff": {
+    "purpose": "Thứ tự triển khai đề xuất cho input guard, consent, persistence và policy; task hiện hữu là nguồn trạng thái và dependency.",
+    "next_session": "Bắt đầu CORE-01.26 (input guard) trong phiên CORE-01 mới; chỉ làm phần độc lập, giữ route fail closed. Policy candidate và quyết định consent có thể được lên kế hoạch độc lập trong phiên task tương ứng.",
+    "sequence": [
+      "CORE-01.26: input guard và contract trước lưu/outbound; giữ các gate khác.",
+      "SRC-01.08: ngân hàng/pháp chế chốt consent; SRC-01.09 triển khai sau quyết định, CORE-01.24 và auth.",
+      "VER-01.01 và CORE-01.24: thống nhất version/schema; CORE-01.07/.29 triển khai persistence/transaction theo dependency.",
+      "POL-01.01–.07: xác định thẩm quyền, xây candidate và loader; test candidate bắt buộc và người có thẩm quyền xác nhận trước nạp runtime.",
+      "CORE-01.04/.08: tích hợp case/assessment chỉ sau gate liên quan; TEST-01 nghiệm thu, không tính placeholder 503 là workflow hoàn chỉnh."
+    ],
+    "session_rule": "Mỗi task lớn một phiên Codex mới; có thể thực hiện subtask của cùng task lớn. Không bắt đầu task lớn khác trong cùng phiên.",
+    "cross_check": [
+      "Agents/BRD.md",
+      "Agents/SRS.md",
+      "Agents/API.md",
+      "Agents/GAPS.md",
+      "knowledge/guardrails.md"
+    ],
+    "status": "Kế hoạch, không thay trạng thái hoặc tuyên bố hoàn thành các task; consent/VER/policy approval còn phụ thuộc quyết định bên ngoài."
+  }
+}

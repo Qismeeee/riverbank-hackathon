@@ -15,7 +15,11 @@ Các quyết định dưới đây cần được chốt trước khi triển kh
 | Trích thiếu | Thời gian xử lý, quá hạn và điều kiện đề xuất cơ cấu? | Ngân hàng và rủi ro | P7/P8 và tích hợp core |
 | Chứng từ | Lưu file gốc ở đâu, ai đọc, trong bao lâu? | Ngân hàng và pháp chế | Object storage, quyền đọc và retention |
 | Dữ liệu seller | Seller export hay OpenAPI có ủy quyền? | Đầu mối dữ liệu | Adapter, provenance và consent |
-| Frontend | Vị trí package, môi trường API và auth? | Frontend và tech lead | Luồng seller, lender và studio |
+| OAuth/OIDC | Chọn Auth0/JWT RS256 cho hackathon; còn cấu hình và kiểm chứng issuer tenant, API audience, client/callback và contract subject/azp, provisioning/control plane, session/logout. Quyền underwriter nền tảng và ownership seller/shop ở DB, audit cấp/thu hồi. | Backend, frontend, tech lead và ngân hàng | Verifier và resolver chưa kiểm thử hoặc nghiệm thu, chưa có frontend/provisioning; OAuth không thay consent dữ liệu sàn. Xem `database/README.md` |
+| Schema mini trước business migration | CORE-01.24 cần đối chiếu `numeric(18,2)`/decimal strings với tiền integer VND bắt buộc, ánh xạ cases/application và version, bổ sung lưu snapshot/idempotency/lease; phối hợp VER-01.01 để thiết kế version điều khoản theo ACTIVE/SUPERSEDED thay vì suy ra từ một final decision bất biến. | Backend, tech lead và đầu mối LOS cho contract version | Schema DBML chưa đủ để chạy business migration; AGENTS/SRS vẫn có hiệu lực. Baseline auth/sellers tại CORE-01.19 độc lập với phần tiền/version |
+| Consent sàn | Ai cấp/thu hồi/cấp lại, purpose/thời hạn/bằng chứng, xử lý race đọc–thu hồi và quyền đọc snapshot lịch sử? | Ngân hàng, pháp chế và đầu mối nguồn | FR-07, SRC-01.08–.09; OAuth login không thay consent sàn, chưa chốt giao diện/retention thì không tự đặt API hoặc quyền lịch sử |
+| Hiệu lực và tái thẩm định | Mốc bắt đầu hạn, dữ liệu/consent/CIC cần làm mới và trigger/API/job tái thẩm định? | Ngân hàng, rủi ro và backend | FR-31b, EXP-01; 14 ngày là mặc định demo, hết hạn chặn handoff và cần quyết định mới |
+| Frontend | Vị trí package và môi trường API? | Frontend và tech lead | Luồng seller, lender và studio |
 
 ## Nguyên tắc giải quyết
 
