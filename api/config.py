@@ -1,5 +1,6 @@
 """Minimal API configuration; integrations remain disabled until configured safely."""
 
+import os
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -29,3 +30,12 @@ class ApiSettings:
                 or (port is not None and port == 0)
             ):
                 raise ValueError("CORS origins must be explicit HTTP(S) origins")
+
+
+def settings_from_environment() -> ApiSettings:
+    """Allow only explicitly configured browser origins; default to no CORS."""
+    raw = os.environ.get("RIVERBANK_CORS_ORIGINS", "")
+    if not raw.strip():
+        return ApiSettings()
+    origins = tuple(origin.strip() for origin in raw.split(","))
+    return ApiSettings(cors_origins=origins)

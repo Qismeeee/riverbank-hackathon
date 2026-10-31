@@ -113,3 +113,16 @@ def test_invalid_payout_and_consent_rejected():
         Payout(date(2026, 1, 5), -1)
     with pytest.raises(ValueError):
         Consent(SCOPE, PURPOSE, datetime(2026, 1, 1), datetime(2027, 1, 1))
+
+
+def test_revocation_during_source_read_discards_snapshot():
+    auth = InMemoryAuthorization({SCOPE}, [CONSENT])
+
+    class RevokingSource:
+        def read(self, scope):
+            auth.consents[0] = replace(CONSENT, revoked_at=datetime.now(UTC))
+            return record(scope)
+
+    reader = ScopedPayoutReader(auth, RevokingSource())
+    with pytest.raises(SourceAccessDenied):
+        reader.snapshot(SCOPE, SCOPE, PURPOSE)

@@ -1,6 +1,6 @@
 # Thiết kế danh tính và phân quyền Riverbank
 
-Schema thiết kế: [riverbank-mini.dbml](riverbank-mini.dbml). Đây là thiết kế cho CORE-01.02, chưa phải migration PostgreSQL hoặc tích hợp đăng nhập đã chạy.
+Schema thiết kế: [riverbank-mini.dbml](riverbank-mini.dbml). Đây là thiết kế cho CORE-01.02; SQL baseline local cho auth tại CORE-01.19 chưa được nghiệm thu và chưa có tích hợp đăng nhập.
 
 ## Đánh giá và lựa chọn
 
@@ -35,7 +35,7 @@ Quan hệ người vay: `auth_identities` → `identity_roles(seller)` → `sell
 
 Ví dụ: seller sở hữu shop A chỉ xem hồ sơ seller-view của A và không được quyết định. Underwriter được ngân hàng cấp role có thể xem hàng đợi hồ sơ, kiểm bằng chứng và quyết định trong nền tảng mini, dù không sở hữu shop nào. Thu hồi role underwriter chấm dứt quyền này ngay cả khi access token còn hạn.
 
-Resolver dự kiến trả `roles` từ assignment hợp lệ và `ScopedGrant(seller, Scope(seller_id, shop_id))` từ ownership grant seller. Helper `Principal.permits` hiện tại vẫn kiểm grant shop cho cả hai role; cần tách kiểm role nền tảng underwriter và ownership seller khi triển khai adapter/dependency, trước khi mở API. Không cache quyền xuyên request khi chưa có cơ chế vô hiệu hóa bảo đảm thu hồi quyền. Mỗi request đọc lại trạng thái quyền từ nguồn authoritative.
+`PostgresGrantResolver` trả `roles` từ assignment hợp lệ và `ScopedGrant(seller, Scope(seller_id, shop_id))` từ ownership grant seller, bằng một truy vấn tại thời điểm thực thi; mỗi lần resolve đọc lại DB. Adapter nhận connection factory phía server hoặc dùng cấu hình PostgreSQL môi trường, chưa được nối vào app mặc định và cần tài khoản runtime chỉ đọc cùng kết nối tới DB authoritative. Nó không xác thực token hoặc kiểm consent. `Principal.is_underwriter()` kiểm role nền tảng; `owns_seller_shop()` kiểm ownership chính xác và `permits()` ủy quyền theo role. `auth/me` dùng dependency xác thực chung; helper quyền chưa nối endpoint nghiệp vụ hoặc được kiểm thử, không tự kiểm liên kết resource hay consent. Kiểm quyền khi ghi quyết định vẫn phải khóa và kiểm lại trong cùng transaction, không dựa vào kết quả resolver trước đó.
 
 ## Provisioning, thu hồi và yêu cầu migration
 
@@ -71,11 +71,46 @@ Kết quả: exit 0, xuất PostgreSQL thành công. Tiếp theo chạy `uv run 
 from pathlib import Path
 from pglast import parse_sql
 from pglast.ast import CreateStmt, AlterTableStmt
-statements = parse_sql(Path('/tmp/riverbank-core-01-02-auth-schema.sql').read_text())
+
+statements = parse_sql(Path("/tmp/riverbank-core-01-02-auth-schema.sql").read_text())
 tables = [s.stmt.relation.relname for s in statements if isinstance(s.stmt, CreateStmt)]
 foreign_keys = [s for s in statements if isinstance(s.stmt, AlterTableStmt)]
-print(f'PostgreSQL syntax parsed: {len(statements)} statements, {len(tables)} tables, {len(foreign_keys)} ALTER TABLE statements.')
-print('Tables: ' + ', '.join(tables))
+print(
+    f"PostgreSQL syntax parsed: {len(statements)} statements, {len(tables)} tables, {len(foreign_keys)} ALTER TABLE statements."
+)
+print("Tables: " + ", ".join(tables))
 ```
 
 Kết quả: exit 0, 104 câu lệnh, 14 bảng, 21 câu `ALTER TABLE`. File SQL chỉ dùng kiểm cú pháp, không phải migration để chạy vận hành. `tasklist.json` hợp lệ với `python3 -m json.tool tasklist.json > /dev/null`; `git diff --check` đạt. Không chạy `make test` hoặc kiểm thử backend/tích hợp trong thay đổi thiết kế này; không có số pass/skip/fail kiểm thử nghiệp vụ để báo cáo.
+
+## PostgreSQL local tạm thời (CORE-01.19)
+
+`api/db/migrations/001_auth_baseline.sql` tạo baseline `sellers` và bốn bảng auth theo thiết kế ở trên, bao gồm khóa, partial index và trigger bảo vệ lịch sử. Đây là baseline phát triển, chưa được nghiệm thu trên PostgreSQL; resolver mới chưa được kiểm thử hoặc nối ứng dụng, chưa có provisioning hay transaction ghép thay đổi quyền với audit. Không dùng dữ liệu thật. Tài khoản Compose là chủ DB/superuser chỉ để phát triển, có thể vượt qua các kiểm soát DB; phân quyền runtime/control plane và kiểm chứng append-only vẫn phải hoàn thiện trước vận hành. Bản nháp bảng business đã được áp dụng thủ công vào volume local theo yêu cầu; bảng loan terms và business repository chưa được tạo. Migration business chính thức vẫn phụ thuộc CORE-01.24/VER-01.01.
+
+`api/db/migrations/002_auth_reader_privileges.sql` bổ sung nhóm PostgreSQL `riverbank_auth_reader` NOLOGIN với quyền SELECT ở các cột resolver cần, không cấp quyền sửa dữ liệu hoặc đọc audit. Script giả định baseline nằm trong schema `public`, phải chạy sau 001 bởi migration role đủ quyền, và cố ý lỗi nếu role đã tồn tại; role PostgreSQL dùng chung toàn cluster nên cần kiểm tra va chạm trước khi áp dụng. Script chưa chạy trên volume local và Compose không tự áp dụng 002. Chưa tạo login hoặc gán membership: operator phải thiết kế và kiểm soát tài khoản runtime sau khi kiểm chứng trong môi trường cô lập. Quyền hiệu lực còn phụ thuộc PUBLIC, các role được thừa hưởng, ownership và superuser; SQL này không thu hồi quyền có sẵn hoặc chứng minh isolation. Cần kiểm chúng, bảo vệ schema/search path và xác nhận role runtime không sở hữu bảng trước sử dụng. Control plane, audit transaction và quyền ghi nghiệp vụ chưa được thiết kế hoặc cấp bởi script này.
+
+Để cấu hình Auth0 cho `api.main:app`, operator đặt `AUTH0_ISSUER` (tenant HTTPS kết thúc `/`), `AUTH0_AUDIENCE` (identifier API riêng) và `AUTH0_CLIENT_ID` (SPA client khác audience), cùng `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`. Compose chuyển ba biến Auth0 nếu có; thiếu bất kỳ giá trị nào giữ xác thực chưa cấu hình. Không ghi token hoặc secret vào repo. Verifier hiện chỉ nhận tenant `*.auth0.com`, RS256, claim `azp` đúng client và subject người dùng; yêu cầu operator kiểm chứng subject access token tương ứng subject OIDC trước provision. `/v1/auth/me` không tự tạo identity hoặc quyền. Chưa kiểm thử với tenant thực; cấu hình Compose dùng superuser local, không an toàn làm runtime production. Kiểm thử verifier và resolver ở TEST-01 trước sử dụng dữ liệu thật.
+
+Rollback 002 sau khi ngừng dùng resolver: thu hồi membership reader đã cấp cho login theo inventory, rồi dùng `database/rollback/002_auth_reader_privileges.sql` thu hồi các quyền cột, `USAGE` type/schema được 002 cấp cho `riverbank_auth_reader`; giữ role, dữ liệu và audit. Chỉ xóa role sau khi kiểm tra toàn cluster không còn membership hoặc phụ thuộc khác; không dùng `DROP OWNED` vì có thể tác động quyền/tài sản ngoài migration. Việc rollback và quyền hiệu lực cần kiểm thử tại TEST-01; không tự áp dụng rollback vào DB hiện có.
+
+Từ thư mục gốc, với Docker daemon đang chạy:
+
+```sh
+printf 'POSTGRES_PASSWORD=%s\n' 'local-development-password' > .env
+docker compose up --build -d
+curl -f http://127.0.0.1:8000/health/db
+docker compose exec db psql -U riverbank -d riverbank -c '\dt'
+docker compose down
+```
+
+Thay mật khẩu local tùy ý; `.env` không được commit. API đọc cấu hình kết nối `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`; `/health/db` chỉ chạy `SELECT 1` và trả 503 khi cấu hình thiếu hoặc không kết nối được. Nó không kiểm chứng schema, auth hay persistence. API hiện chưa lưu hồ sơ vào Postgres. DBeaver trên máy host kết nối `127.0.0.1:5433`, database và user `riverbank`, mật khẩu `POSTGRES_PASSWORD` trong `.env`; cổng chỉ mở trên localhost. Có thể dùng `docker compose exec db psql ...`. Dữ liệu trong volume `postgres_data` còn sau `docker compose down`.
+
+Postgres chỉ chạy SQL trong `docker-entrypoint-initdb.d` khi volume dữ liệu mới được khởi tạo. Sửa file SQL không tự cập nhật volume hiện có: cần migration có version, không chạy lại baseline trên DB có dữ liệu. Chỉ với dữ liệu local bỏ được, `docker compose down -v` xóa toàn bộ volume và lần `up` sau tạo lại baseline. Rollback môi trường phát triển là dừng Compose và, sau khi sao lưu dữ liệu cần giữ, xóa volume; không có rollback bảo toàn dữ liệu hoặc migration runner cho môi trường có dữ liệu. Không thực hiện việc này trên DB dùng chung. Cần kiểm chứng SQL, constraint, privilege, rollback và concurrency trong TEST-01 trước khi đánh dấu CORE-01.19 hoàn thành.
+
+Kiểm tra phiên này (macOS): `POSTGRES_PASSWORD=local-check docker compose config --quiet` đạt; `uv run --locked ruff check api/main.py` và `uv run --locked ruff format --check api/main.py` đạt; `python3 -m json.tool tasklist.json` và `git diff --check` đạt. `docker info` thất bại vì Docker daemon không chạy, nên chưa build/chạy container, chưa chạy SQL trên PostgreSQL hoặc kiểm tra kết nối thực. Không chạy `make test` hay bổ sung test nghiệp vụ theo kế hoạch TEST-01.
+
+## Bản nháp các bảng business
+
+`database/drafts/002_business_draft.sql` là bản SQL tham khảo cho chín bảng còn lại trong DBML: consent, applications, assessment runs, evidence, input/generated documents, decisions, handoffs và application events. Bản nháp dựa trên DBML, dùng `bigint` cho các cột tiền VND và tham chiếu baseline auth hiện có; không được Compose tự chạy; đã được áp dụng thủ công vào volume DB local hiện tại theo yêu cầu người dùng. Đây không phải migration được phê duyệt: chưa thống nhất version điều khoản, hợp đồng snapshot/JSON, idempotency và handoff lease; chưa hoàn thiện bảo vệ lịch sử, transaction consent, quyền và workflow. Chỉ dùng DB local cho dữ liệu synthetic; không chạy lại script vào volume đã có bảng và không dùng dữ liệu thật. CORE-01.24 và VER-01.01 phải được chốt trước khi hoàn thiện/chạy migration business. API vẫn chưa có repository PostgreSQL.
+
+Ngày 2026-10-31: theo yêu cầu, chạy `docker compose exec -T db psql -v ON_ERROR_STOP=1 -U riverbank -d riverbank < database/drafts/002_business_draft.sql` thành công, sau đó `docker compose restart db`. `\dt` liệt kê 14 bảng và `/health/db` trả `database: reachable`. Chỉ volume hiện tại có bản nháp: volume mới chỉ tự chạy baseline auth; script draft không phải migration được nghiệm thu.

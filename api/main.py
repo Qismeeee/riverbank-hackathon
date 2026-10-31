@@ -1,15 +1,29 @@
-"""Fail-closed HTTP foundation; no identity provider or workflow is configured."""
+"""Fail-closed HTTP foundation; authentication requires trusted server configuration."""
 
-from typing import Annotated
+import os
 
-from fastapi import FastAPI, HTTPException, Security, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from api.config import ApiSettings
-from api.security.auth import AuthService, AuthUnavailable, InvalidAccessToken
+from api.config import ApiSettings, settings_from_environment
+from api.routers import auth, cases, copilot, health, statements, studio, underwriting
+from api.security.auth import AuthService
+from api.security.auth0 import Auth0AccessTokenVerifier
+from api.security.postgres_grants import PostgresGrantResolver
 
-_bearer = HTTPBearer(auto_error=False)
+
+def auth_from_environment() -> AuthService | None:
+    """Enable Auth0 only when the complete trusted server configuration is present."""
+    issuer = os.environ.get("AUTH0_ISSUER", "")
+    audience = os.environ.get("AUTH0_AUDIENCE", "")
+    client_id = os.environ.get("AUTH0_CLIENT_ID", "")
+    if not all((issuer, audience, client_id)) or not all(
+        os.environ.get(key) for key in ("PGHOST", "PGDATABASE", "PGUSER", "PGPASSWORD")
+    ):
+        return None
+    return AuthService(
+        Auth0AccessTokenVerifier(issuer, audience, client_id), PostgresGrantResolver()
+    )
 
 
 def create_app(
@@ -17,6 +31,8 @@ def create_app(
 ) -> FastAPI:
     settings = settings or ApiSettings()
     app = FastAPI(title="Riverbank API")
+    app.state.auth_service = auth_service
+
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -26,55 +42,15 @@ def create_app(
             allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
         )
 
-    @app.get("/v1/auth/me")
-    def auth_me(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Security(_bearer)],
-    ) -> dict:
-        if credentials is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Bearer access token required",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if auth_service is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "code": "AUTH_NOT_CONFIGURED",
-                    "details": "Identity provider not configured",
-                },
-            )
-        try:
-            principal = auth_service.authenticate(credentials.credentials)
-        except InvalidAccessToken:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid access token",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from None
-        except AuthUnavailable:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={"code": "AUTH_UNAVAILABLE", "details": "Authentication unavailable"},
-            ) from None
-        return {
-            "issuer": principal.identity.issuer,
-            "subject": principal.identity.subject,
-            "roles": sorted(principal.grants.roles),
-            "scoped_grants": [
-                {
-                    "role": grant.role,
-                    "seller_id": grant.scope.seller_id,
-                    "shop_id": grant.scope.shop_id,
-                }
-                for grant in sorted(
-                    principal.grants.scoped,
-                    key=lambda grant: (grant.role, grant.scope.seller_id, grant.scope.shop_id),
-                )
-            ],
-        }
+    app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(cases.router)
+    app.include_router(copilot.router)
+    app.include_router(underwriting.router)
+    app.include_router(statements.router)
+    app.include_router(studio.router)
 
     return app
 
 
-app = create_app()
+app = create_app(settings_from_environment(), auth_service=auth_from_environment())

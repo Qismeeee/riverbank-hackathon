@@ -1,4 +1,4 @@
-"""Provider-neutral boundaries; no token verifier or grant store is included.
+"""Provider-neutral authentication and authorization boundaries.
 
 Implementations must be trusted server-side dependencies. A verifier must validate
 an API access token against the agreed issuer contract, not merely decode a JWT.
@@ -44,6 +44,8 @@ class ScopedGrant:
     def __post_init__(self) -> None:
         if not isinstance(self.role, Role) or not isinstance(self.scope, Scope):
             raise TypeError("scoped grant requires a role and seller/shop scope")
+        if self.role is not Role.SELLER:
+            raise ValueError("only seller ownership has a shop scope")
 
 
 @dataclass(frozen=True)
@@ -67,12 +69,27 @@ class Principal:
     identity: Identity
     grants: Grants
 
-    def permits(self, role: Role, scope: Scope) -> bool:
-        """Both the role and the exact seller/shop pair must be granted.
+    def is_underwriter(self) -> bool:
+        """Check platform role; resource linkage and write-time checks remain separate."""
+        return Role.UNDERWRITER in self.grants.roles
 
-        This does not confer marketplace-data consent, which is checked separately.
+    def owns_seller_shop(self, scope: Scope) -> bool:
+        """Check exact seller ownership, without conferring marketplace consent."""
+        if not isinstance(scope, Scope):
+            return False
+        return ScopedGrant(Role.SELLER, scope) in self.grants.scoped
+
+    def permits(self, role: Role, scope: Scope) -> bool:
+        """Check platform underwriter role or exact seller ownership.
+
+        Scope is required for compatibility but is not an underwriter grant.
+        This does not check resource linkage, consent, or write-time permissions.
         """
-        return ScopedGrant(role, scope) in self.grants.scoped
+        if role is Role.UNDERWRITER:
+            return self.is_underwriter()
+        if role is Role.SELLER:
+            return self.owns_seller_shop(scope)
+        return False
 
 
 class AccessTokenVerifier(Protocol):

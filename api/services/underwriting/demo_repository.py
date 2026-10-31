@@ -33,18 +33,28 @@ class StoredSnapshot:
 class DemoSourceRepository:
     """Store synthetic snapshots and consent history for one process only.
 
-    The caller must derive actor_scope and case/run identity from authenticated,
-    server-owned state. This class is not a production identity or case store.
+    Cases and runs are registered from server-owned state at construction; a run
+    belongs to exactly one registered case. The caller must still authenticate and
+    authorize the actor. This class is not a production identity or case store.
     """
 
-    def __init__(self, shops: set[Scope], cases: dict[str, Scope], source: PayoutSource) -> None:
+    def __init__(
+        self,
+        shops: set[Scope],
+        cases: dict[str, Scope],
+        runs: dict[str, str],
+        source: PayoutSource,
+    ) -> None:
         if any(not case_id.strip() or scope not in shops for case_id, scope in cases.items()):
             raise ValueError("cases must have a nonempty ID and a registered shop")
+        if any(not run_id.strip() or case_id not in cases for run_id, case_id in runs.items()):
+            raise ValueError("runs must have a nonempty ID and a registered case")
         self._shops = frozenset(shops)
         self._source = source
         self._consents: list[Consent] = []
         self._revocations: dict[tuple[Scope, str], datetime] = {}
         self._cases = dict(cases)
+        self._runs = dict(runs)
         self._snapshots: dict[tuple[str, str], StoredSnapshot] = {}
         self._lock = RLock()
 
@@ -54,6 +64,8 @@ class DemoSourceRepository:
                 raise SourceAccessDenied("seller/shop scope invalid")
             if consent.revoked_at is not None:
                 raise ValueError("a new grant cannot already be revoked")
+            if consent.granted_at > datetime.now(UTC):
+                raise ValueError("future-dated consent grants are not supported")
             last_revocation = self._revocations.get((consent.scope, consent.purpose))
             if last_revocation is not None and consent.granted_at <= last_revocation:
                 raise ValueError("a new grant must be dated after the last revocation")
@@ -89,6 +101,7 @@ class DemoSourceRepository:
                 actor_scope != scope
                 or scope not in self._shops
                 or self._cases.get(case_id) != scope
+                or self._runs.get(run_id) != case_id
                 or not grants
             ):
                 raise SourceAccessDenied("seller/shop scope or consent invalid")
