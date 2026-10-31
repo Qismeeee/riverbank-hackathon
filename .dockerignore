@@ -1,9 +1,0 @@
-# Allow only runtime source and dependency metadata into the build context.
-**
-!api/
-!api/**
-api/tests/
-api/**/__pycache__/
-!pyproject.toml
-!uv.lock
-!.python-version

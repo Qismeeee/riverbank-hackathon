@@ -1,0 +1,121 @@
+{
+  "case_id": "FX-C",
+  "title": "Xin 300 triệu vượt 2,5 lần mức sàn, nhánh sao kê",
+  "source": "policy/worked-examples.md",
+  "base_input": {
+    "cash_on_hand": 120000000,
+    "supplier_schedule": [
+      {
+        "week": 0,
+        "amount": 200000000
+      }
+    ],
+    "sell_weeks": 6,
+    "payout_weekly_history": [
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000,
+      70000000
+    ],
+    "requested_amount": 150000000,
+    "platform_support_limit": 120000000,
+    "shop_age_months": 12,
+    "return_rate_90d": 0.05,
+    "cic_group": 1,
+    "cic_outstanding": 0
+  },
+  "variants": [
+    {
+      "variant_id": "awaiting",
+      "input": {
+        "requested_amount": 300000000,
+        "platform_support_limit": 100000000
+      },
+      "expected": {
+        "gap": 80000000,
+        "amount_proposed": 90000000,
+        "tenor_weeks": 8,
+        "weekly_deduction": 11250000,
+        "status": "AWAITING_STATEMENT",
+        "reason": "STATEMENT_REQUIRED",
+        "statement_required": true,
+        "failed_rules": [
+          "R05"
+        ],
+        "cic_called": true,
+        "pd_scored": true
+      }
+    },
+    {
+      "variant_id": "mismatch",
+      "input": {
+        "requested_amount": 300000000,
+        "platform_support_limit": 100000000,
+        "statement": {
+          "weeks": 4,
+          "marketplace_total": 480000000
+        }
+      },
+      "expected": {
+        "gap": 80000000,
+        "amount_proposed": 90000000,
+        "tenor_weeks": 8,
+        "weekly_deduction": 11250000,
+        "status_before_statement": "AWAITING_STATEMENT",
+        "statement_matched": false,
+        "status": "ESCALATED",
+        "reason": "HARD_POLICY_FAILURE",
+        "failed_rules": [
+          "R05"
+        ],
+        "auto_rejected": false
+      }
+    },
+    {
+      "variant_id": "matched",
+      "input": {
+        "requested_amount": 300000000,
+        "platform_support_limit": 100000000,
+        "statement": {
+          "weeks": 4,
+          "marketplace_total": 300000000
+        }
+      },
+      "expected": {
+        "gap": 80000000,
+        "amount_proposed": 90000000,
+        "tenor_weeks": 8,
+        "weekly_deduction": 11250000,
+        "status_before_statement": "AWAITING_STATEMENT",
+        "statement_matched": true,
+        "status": "PENDING_REVIEW",
+        "failed_rules": []
+      }
+    },
+    {
+      "variant_id": "boundary",
+      "input": {
+        "requested_amount": 300000000,
+        "platform_support_limit": 120000000
+      },
+      "expected": {
+        "gap": 80000000,
+        "amount_proposed": 90000000,
+        "tenor_weeks": 8,
+        "weekly_deduction": 11250000,
+        "statement_required": false,
+        "status": "PENDING_REVIEW",
+        "failed_rules": []
+      }
+    }
+  ],
+  "wording": "Số liệu sao kê và payout sàn không khớp, cần xác minh."
+}
