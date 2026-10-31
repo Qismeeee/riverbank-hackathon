@@ -19,6 +19,26 @@ Kế hoạch triển khai được chia theo dependency và tiêu chí nghiệm 
 | P7-01 Monitor | P3 sau VER-01, policy/BL-11 đã chốt | Tính phương án bằng code, D22 có evidence, người duyệt version mới | Không đổi lịch ACTIVE trước duyệt, không tự cơ cấu, retry/idempotency đúng |
 | BANK-01 adapter thật | Sau contract ngân hàng | CIC/LOS adapter với sandbox và auth phù hợp | Scope/consent/retry đúng, không dùng mock làm bằng chứng tích hợp thật |
 
+## Trạng thái BASE-01 — 31/10/2026
+
+Đã triển khai Python 3.12, uv lock, cấu hình tập trung, API `/health`, `make setup/test` và Docker ARM64. Hướng dẫn local/production được gom tại [README](../README.md). Bỏ entrypoint chỉ bọc exec; Docker chạy Python trực tiếp bằng exec-form CMD.
+
+Đã cấu hình một workflow CI/CD theo GHCR → EC2 ARM64/Compose/Caddy. CD khóa sau CI, chỉ bật trên main khi có ENABLE_DEPLOY=true và cấu hình production. Có kiểm image/health/readiness, lưu release, rollback cả image và Compose/Caddy; trạng thái AWS thực tế cập nhật bên dưới. Bộ kiểm tra WSL mới nhất: `make UV=./.tools-linux/uv test` đạt 26 pytest pass, 0 skip/fail; Bash syntax, Ruff lint/format, ShellCheck và actionlint đạt. Biến môi trường local như README.
+
+Docker: `make docker-build PLATFORM=linux/arm64` và `make UV=./.tools-linux/uv docker-smoke PLATFORM=linux/arm64` đạt trên Engine WSL/QEMU; smoke chờ trạng thái healthy thực tế. Compose config/Caddy validate đạt. Đã kiểm deployment thật trên project test riêng: bản đầu HTTP 200, bản Caddy lỗi cố ý trả 503, script trả lỗi và rollback về đúng image/config trước đó, HTTP 200 phục hồi; container test đã dừng, volume giữ lại. Không coi kiểm tra HTTP local này là bằng chứng certificate/HTTPS hoặc SSH AWS.
+
+CI nền đã đạt Quality/Docker ARM64 trên PR #1/main; Deploy EC2 bị skip khi chưa bật CD. HTTPS AWS đã kiểm trực tiếp, CD GitHub qua GHCR/SSH của phần mới chưa chạy. Main đã bảo vệ bằng PR + hai required checks từ GitHub Actions, enforce admins và chặn force push; ENABLE_DEPLOY vẫn false. Các thay đổi cloud local cần được commit/push bởi người dùng để kiểm lại. Task sản phẩm tiếp theo là SRC-01; các hệ thống khác trong SAD vẫn cần xây theo task.
+
+## Cấu hình dev dùng prod — 31/10/2026
+
+Theo yêu cầu chủ dự án, `.env` local dùng RDS `riverbank` và bucket prod hiện hữu. Đã tạo AWS profile `riverbank`, SSH tunnel qua EC2 prod, xác minh TLS RDS với CA AWS; `SELECT 1` trong transaction read-only và S3 HeadBucket đạt HTTP 200. Không chạy migration hoặc ghi dữ liệu prod, không gọi model. Key và `.env` được Git bỏ qua. Đã thêm alias cấu hình cloud, che secret, CORS và SDK AWS/PostgreSQL; `make test` WSL đạt 17 pass, 0 skip/fail; Docker ARM64 build/smoke healthy đạt. Hướng dẫn mở tunnel và giới hạn kiểm chứng ở README. Thay đổi của lần cấu hình này chưa commit/push.
+
+## AWS production — 31/10/2026
+
+EC2 mới `i-06ab8a545deb7a7f3` có EIP `3.0.194.9`, HTTPS `3-0-194-9.sslip.io`; `/health` và `/ready` HTTP 200, TLS hợp lệ. Readiness kiểm RDS read-only qua Secrets Manager/role và S3 HeadBucket. Deletion protection RDS bật; backup giữ 1 ngày do Free Tier từ chối 7 ngày và chủ dự án chọn không nâng gói. S3 mã hóa, versioning, block public đã kiểm. Có log API/Caddy, datapoint RAM/đĩa và bốn alarm CloudWatch gắn SNS hiện hữu. Chưa test restore/giao thông báo SNS hoặc ghi dữ liệu; không gọi model.
+
+Stack clone cũ trên máy mới đã dừng và giữ volume; máy cũ `13.214.87.165` không đổi, health HTTPS vẫn đạt. Image đang chạy là bản **validation từ working tree**, không giả release SHA. GitHub environment production và SSH riêng đã cấu hình/kiểm, CD tắt chờ người dùng push/merge. Chưa có run CD GitHub của phần mới; không tự commit/push/merge. `make test` đạt 26 pass, 0 skip; Docker ARM64 build/smoke đạt. Xem README để bật CD sau khi code mới ở main và các giới hạn HA/root EBS.
+
 ## Thực hiện FE-01
 
 1. Xác định package frontend và thiết kế màn hình seller, lender, studio theo BRD/SRS.

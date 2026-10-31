@@ -1,1 +1,1 @@
-"""Riverbank backend package."""
+"""Riverbank API."""

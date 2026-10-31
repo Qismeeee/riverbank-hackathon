@@ -2,12 +2,12 @@ repos:
   - repo: local
     hooks:
       - id: ruff-check
-        name: ruff check
-        entry: uv run --locked ruff check
+        name: Ruff lint (locked version)
+        entry: uv run --offline --no-sync ruff check
         language: system
         types_or: [python, pyi]
       - id: ruff-format
-        name: ruff format check
-        entry: uv run --locked ruff format --check
+        name: Ruff format check (locked version)
+        entry: uv run --offline --no-sync ruff format --check
         language: system
         types_or: [python, pyi]

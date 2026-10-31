@@ -5,8 +5,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.config import ApiSettings, settings_from_environment
-from api.routers import auth, cases, health, statements
+from api.config import ApiSettings, Settings, get_settings, settings_from_environment
+from api.routers import auth, cases, health, runtime_health, statements
 from api.routers.foundation import copilot, studio, underwriting
 from api.security.auth import AuthService
 from api.security.auth0 import Auth0AccessTokenVerifier
@@ -28,22 +28,29 @@ def auth_from_environment() -> AuthService | None:
 
 
 def create_app(
-    settings: ApiSettings | None = None, *, auth_service: AuthService | None = None
+    settings: ApiSettings | Settings | None = None, *, auth_service: AuthService | None = None
 ) -> FastAPI:
-    settings = settings or ApiSettings()
+    runtime_settings = settings if isinstance(settings, Settings) else get_settings()
+    origins = (
+        ApiSettings(tuple(settings.allowed_origins))
+        if isinstance(settings, Settings)
+        else (settings or ApiSettings())
+    )
     app = FastAPI(title="Riverbank API")
+    app.state.runtime_settings = runtime_settings
     app.state.auth_service = auth_service
 
-    if settings.cors_origins:
+    if origins.cors_origins:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=list(settings.cors_origins),
+            allow_origins=list(origins.cors_origins),
             allow_credentials=True,
             allow_methods=["GET", "POST"],
             allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
         )
 
     app.include_router(health.router)
+    app.include_router(runtime_health.router)
     app.include_router(auth.router)
     app.include_router(cases.router)
     app.include_router(copilot.router)

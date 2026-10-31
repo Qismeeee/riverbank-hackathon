@@ -4,6 +4,10 @@ import os
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from api.runtime_config import Settings, get_settings
+
+__all__ = ["ApiSettings", "Settings", "get_settings", "settings_from_environment"]
+
 
 @dataclass(frozen=True)
 class ApiSettings:
