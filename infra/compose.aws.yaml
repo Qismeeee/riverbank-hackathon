@@ -1,6 +1,24 @@
 # Production-only overlay. Pre-create the log group and grant the host role
 # logs:CreateLogStream / logs:PutLogEvents before starting these containers.
 services:
+  kafka:
+    logging:
+      driver: awslogs
+      options: !override
+        awslogs-region: ${AWS_REGION:-ap-southeast-1}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP:?Set CLOUDWATCH_LOG_GROUP}
+        awslogs-stream: kafka
+        mode: non-blocking
+        max-buffer-size: 2m
+  redis:
+    logging:
+      driver: awslogs
+      options: !override
+        awslogs-region: ${AWS_REGION:-ap-southeast-1}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP:?Set CLOUDWATCH_LOG_GROUP}
+        awslogs-stream: redis
+        mode: non-blocking
+        max-buffer-size: 1m
   api:
     logging:
       driver: awslogs

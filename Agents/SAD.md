@@ -45,6 +45,10 @@ Evidence có payload/hash và được kiểm lại khi dùng. Handoff có trạ
 
 Kiến trúc triển khai: API container sau Caddy trên EC2 arm64, RDS PostgreSQL, S3 cho raw ETL, Secrets Manager qua IAM role, GitHub Actions CI/deploy. Sao kê upload được nhận trực tiếp qua API. Việc lưu file gốc lên object storage phụ thuộc chính sách retention đã chốt với ngân hàng.
 
+Hạ tầng đã bổ sung Cognito User Pool (Code + PKCE, MFA), ECR và GitHub OIDC/SSM; CloudFormation quản lý identity/roles/registry/deployment document. Kafka KRaft một broker và Redis ACL/AOF chạy cùng EC2, chỉ trong mạng Docker internal, credential riêng ở Secrets Manager. Runtime và deploy có role riêng với permissions boundary. GitHub OIDC là danh tính pipeline, tách với Cognito là danh tính người dùng. Chi tiết cấu hình và bằng chứng thực tế ở README; dựng pool/groups không thay phần JWT/ownership của backend hoặc callback của frontend.
+
+Đây vẫn là triển khai một máy cho ngân sách credit; chưa có EKS, HA hoặc pipeline nghiệp vụ outbox/consumer. Kafka/Redis được kiểm bằng dữ liệu giả, không kích hoạt worker/model hoặc chuyển dữ liệu nhạy cảm sang đó. CloudWatch/SNS theo dõi host, services và HTTPS readiness. Thay đổi hạ tầng không tự thay contract API hoặc chính sách tín dụng.
+
 Thiết lập runbook triển khai, rollback và quản lý secrets trước thao tác vận hành. Không chép secrets hoặc địa chỉ/mật khẩu của máy teammate vào source. Workflow deploy phải có điều kiện kích hoạt và phân quyền rõ.
 
 ## Quyết định kiến trúc
