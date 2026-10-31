@@ -2,7 +2,9 @@
 
 ## Môi trường kiểm thử
 
-BASE-01 đã cung cấp API `/health`, Makefile và test thực thi. Chạy từ gốc repository trong WSL/Linux với Python 3.12, uv 0.13.6 và GNU make. Docker/Buildx cần cho build và smoke test container; Postgres chưa thuộc implementation này. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
+BASE-01 đã cung cấp API `/health`, `/ready`, Makefile và test thực thi. Chạy từ gốc repository trong WSL/Linux với Python 3.12, uv 0.13.6 và GNU make. Docker/Buildx cần cho build/smoke. Cloud readiness dùng PostgreSQL và S3; unit test thay adapter bằng mock, vẫn chặn outbound. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
+
+Readiness: local không gọi cloud; production thiếu cấu hình hoặc DB/S3 lỗi phải trả 503 trong khi `/health` vẫn 200. Kiểm TLS verify-full, transaction read-only, secret xoay được đọc lại, lỗi không lộ credential và deploy rollback khi `/ready` lỗi. Trên AWS chỉ kiểm `SELECT 1`/HeadBucket; chưa kiểm nghiệp vụ, quyền ghi, restore hoặc giao thông báo SNS.
 
 ```bash
 make setup
@@ -46,7 +48,7 @@ Ma trận nghiệp vụ dưới đây là yêu cầu cho các task sau; BASE-01 
 
 ## Tệp test theo mảng
 
-Hiện có `api/tests/test_health.py`, `test_config.py` và `test_deploy.py`. Danh sách nghiệp vụ dưới đây là cấu trúc test dự kiến, chưa phải các test đã tồn tại hoặc đã pass.
+Hiện có `api/tests/test_health.py`, `test_config.py` và `test_deploy.py`. Test cấu hình kiểm thêm alias cloud, che credential và CORS đúng origin. Danh sách nghiệp vụ dưới đây là cấu trúc test dự kiến, chưa phải các test đã tồn tại hoặc đã pass.
 
 - Engine/policy: `api/tests/test_cashflow.py`, `test_rules.py`, `test_golden.py`.
 - Workflow/permission: `test_underwriting.py`, `test_auth.py`, `test_underwriting_shopee.py`.

@@ -1,0 +1,98 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AuditProductionResources",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeAddresses", "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus", "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeSecurityGroups", "ec2:DescribeVolumes",
+        "rds:DescribeDBInstances", "rds:DescribeDBSnapshots",
+        "cloudwatch:DescribeAlarms", "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics",
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*",
+      "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-1"}}
+    },
+    {
+      "Sid": "AllocateTaggedProjectAddress",
+      "Effect": "Allow",
+      "Action": "ec2:AllocateAddress",
+      "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
+      "Condition": {"StringEquals": {"aws:RequestTag/Project": "riverbank-hackathon"}}
+    },
+    {
+      "Sid": "TagAddressDuringAllocation",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
+      "Condition": {"StringEquals": {"ec2:CreateAction": "AllocateAddress", "aws:RequestTag/Project": "riverbank-hackathon"}}
+    },
+    {
+      "Sid": "AssociateOnlyProjectAddress",
+      "Effect": "Allow",
+      "Action": ["ec2:AssociateAddress", "ec2:DisassociateAddress", "ec2:ReleaseAddress"],
+      "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:elastic-ip/*",
+      "Condition": {"StringEquals": {"aws:ResourceTag/Project": "riverbank-hackathon"}}
+    },
+    {
+      "Sid": "AssociateOnlySelectedInstance",
+      "Effect": "Allow",
+      "Action": "ec2:AssociateAddress",
+      "Resource": [
+        "arn:aws:ec2:ap-southeast-1:424016506356:instance/i-06ab8a545deb7a7f3",
+        "arn:aws:ec2:ap-southeast-1:424016506356:network-interface/eni-098e0df2401fa6d7d"
+      ]
+    },
+    {
+      "Sid": "ConfigureExistingDatabaseSecurityGroup",
+      "Effect": "Allow",
+      "Action": ["ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupIngress"],
+      "Resource": "arn:aws:ec2:ap-southeast-1:424016506356:security-group/sg-0b4600441c5cba12d"
+    },
+    {
+      "Sid": "ProjectLogGroup",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:PutRetentionPolicy", "logs:DescribeLogStreams", "logs:GetLogEvents", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": [
+        "arn:aws:logs:ap-southeast-1:424016506356:log-group:/riverbank-hackathon/*",
+        "arn:aws:logs:ap-southeast-1:424016506356:log-group:/riverbank-hackathon/*:*"
+      ]
+    },
+    {
+      "Sid": "ProjectAlarms",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricAlarm", "cloudwatch:TagResource"],
+      "Resource": "arn:aws:cloudwatch:ap-southeast-1:424016506356:alarm:riverbank-hackathon-*"
+    },
+    {
+      "Sid": "ConfigureDatabaseBackupsAndDeletionProtection",
+      "Effect": "Allow",
+      "Action": "rds:ModifyDBInstance",
+      "Resource": "arn:aws:rds:ap-southeast-1:424016506356:db:riverbank-db"
+    },
+    {
+      "Sid": "InspectExistingBucketProtection",
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketPublicAccessBlock", "s3:GetEncryptionConfiguration", "s3:GetBucketVersioning", "s3:GetLifecycleConfiguration"],
+      "Resource": "arn:aws:s3:::riverbank-data-424016506356"
+    },
+    {
+      "Sid": "InspectExistingDatabaseSecretMetadata",
+      "Effect": "Allow",
+      "Action": "secretsmanager:DescribeSecret",
+      "Resource": "arn:aws:secretsmanager:ap-southeast-1:424016506356:secret:rds!db-1893a3d4-b65e-47a7-bb55-2134b3deaff7-*"
+    },
+    {
+      "Sid": "InspectExistingInstanceRole",
+      "Effect": "Allow",
+      "Action": ["iam:GetInstanceProfile", "iam:GetRole", "iam:ListAttachedRolePolicies", "iam:ListRolePolicies", "iam:GetRolePolicy"],
+      "Resource": [
+        "arn:aws:iam::424016506356:instance-profile/riverbank-ec2-role",
+        "arn:aws:iam::424016506356:role/riverbank-ec2-role"
+      ]
+    }
+  ]
+}

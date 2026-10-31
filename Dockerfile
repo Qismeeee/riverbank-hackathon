@@ -22,6 +22,7 @@ RUN groupadd --gid 10001 app \
         --home-dir /app --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY --from=build --chown=10001:10001 /app/.venv /app/.venv
+ADD --checksum=sha256:90a6f1a7978a1b1b096dca6c57511ca48d3b8cf052f8e704baf358f34ea2f21b --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/certs/rds-global-bundle.pem
 COPY --chown=10001:10001 api ./api
 USER 10001:10001
 EXPOSE 8000

@@ -8,11 +8,26 @@ services:
     init: true
     environment:
       RIVERBANK_ENVIRONMENT: production
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      DB_HOST: ${DB_HOST:-}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-}
+      DB_SECRET_ID: ${DB_SECRET_ID:-}
+      DB_SSLROOTCERT: /etc/ssl/certs/rds-global-bundle.pem
+      S3_BUCKET: ${S3_BUCKET:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      AWS_METADATA_SERVICE_TIMEOUT: "2"
+      AWS_METADATA_SERVICE_NUM_ATTEMPTS: "1"
     expose:
       - "8000"
     mem_limit: 512m
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
     logging:
       driver: local
       options:

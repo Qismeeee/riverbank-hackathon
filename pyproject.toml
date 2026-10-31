@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Riverbank API foundation"
 requires-python = "==3.12.*"
 dependencies = [
+    "boto3==1.43.123",
     "fastapi==0.162.0",
+    "psycopg[binary]==3.3.6",
     "pydantic-settings==2.16.2",
     "uvicorn==0.54.0",
 ]
