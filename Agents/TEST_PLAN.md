@@ -2,14 +2,14 @@
 
 ## Môi trường kiểm thử
 
-Chuẩn hóa các lệnh dưới đây trong task BASE-01, rồi chạy từ gốc repository trong WSL/Linux. Bộ tài liệu không bao gồm backend, Makefile hoặc bộ test thực thi. Python 3.12, uv, make là phụ thuộc. Docker/Postgres chỉ cần cho đường tích hợp DB. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
+Chạy các lệnh dưới đây từ gốc repository trong macOS hoặc WSL/Linux. BASE-01 cung cấp Makefile và smoke test môi trường; SRC-01 bổ sung source layer và test consent/scope offline; ENG-01 có test tính dòng tiền A/B/E ở cấp engine. Workflow và kiểm thử tích hợp chưa triển khai. Python 3.12, uv, make là phụ thuộc. Docker/Postgres chỉ cần cho đường tích hợp DB. Mỗi báo cáo nghiệm thu ghi rõ cấu hình, lệnh và kết quả chạy.
 
 ```bash
 make setup
 make test
 ```
 
-`make setup` tạo môi trường và cài dependency/pre-commit. Không chạy lại nếu đã có môi trường phù hợp. `make test` gồm ruff check, format check và pytest. Với PowerShell, Makefile hiện dùng `.venv/bin` và cú pháp biến môi trường POSIX, nên chọn WSL hoặc ghi rõ lệnh tương đương, không giả định chạy nguyên bản được trên Windows.
+`make setup` tạo môi trường và cài dependency/pre-commit. Không chạy lại nếu đã có môi trường phù hợp. `make test` dùng `uv run --locked` để chạy ruff check, format check và pytest. Các lệnh hướng dẫn theo shell POSIX; với Windows dùng WSL hoặc ghi rõ lệnh tương đương đã kiểm chứng.
 
 ## Ma trận nghiệm thu
 
@@ -23,6 +23,10 @@ make test
 | F injection/PII | Chặn hoặc làm sạch theo đường vào, không lọt chữ gốc ra model |
 | Counter | Lịch/PD/policy chạy lại, lịch sử cũ còn, số cuối từ engine |
 | Seller khác | 403 scope, không lộ dữ liệu và evidence |
+| Danh tính OIDC | Cùng issuer/subject không trùng row; cùng subject khác issuer là hai danh tính; phân biệt hoa/thường, subject tối đa 255 ký tự; không nối bằng email |
+| Quyền DB | Danh tính chưa provision/disable, role hoặc ownership seller thiếu/hết hạn/thu hồi không truy cập dữ liệu; role seller không tự cấp mọi shop |
+| Seller và underwriter | Seller ở A không đọc seller-view của B hoặc ra quyết định; underwriter nền tảng đang có hiệu lực đọc queue/thẩm định/quyết định mà không cần grant shop; FK chặn actor quyết định dùng assignment seller |
+| Thu hồi và audit quyền | Regrant role không hồi sinh scope cũ; quyết định tuần tự hóa với disable/revoke; audit chỉ thêm, actor người/hệ thống đúng và client không giả được |
 | Thiếu consent | Không đọc dữ liệu sàn |
 | Idempotency | Cùng key/body cùng kết quả, khác body có lỗi |
 | Version cũ | Conflict, không ghi đè thao tác trước |
@@ -48,3 +52,5 @@ Acceptance criteria của task đạt, kiểm tra phù hợp rủi ro, `make tes
 NFR latency/cost đo riêng có timestamp, cấu hình model, số case và percentile/trung bình. Không dùng thời gian pytest offline để suy ra SLA online.
 
 Nghiệm thu phải phân biệt kiểm tra tài liệu, test backend offline, test tích hợp và kiểm tra môi trường triển khai.
+
+Thiết kế auth tại `database/riverbank-mini.dbml` và `database/README.md` mới được kiểm tra ở mức schema; chưa chứng minh migration/transaction, provider hoặc phân quyền HTTP. Bổ sung kiểm thử các hàng auth ở TEST-01 sau khi có migration và adapter. Kiểm DBML/xuất SQL không được tính là kiểm thử tích hợp.

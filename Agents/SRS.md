@@ -36,4 +36,6 @@ NFR-01 và NFR-06: mục tiêu dưới 90 giây và dưới 0,10 USD/hồ sơ de
 
 NFR-02: kết quả deterministic của phần tính phải khớp tuyệt đối. NFR-03: 100% câu có số trong memo chính thức có evidence và sai lệch 0 đồng. NFR-04: thuộc tính nhạy cảm không vào feature/memo. NFR-05: người dùng thường không sửa/xóa audit.
 
-Auth phải tách seller/underwriter, seller không đọc hồ sơ người khác hoặc evidence nội bộ. Chống ghi trùng bằng idempotency và chống mất cập nhật bằng expected version. Không làm mất quyết định khi LOS lỗi.
+Đăng nhập dùng OpenID Connect trên OAuth 2.0; API kiểm access token và tách role seller/underwriter cùng seller/shop scope phía server. Consent đăng nhập không thay consent đọc dữ liệu sàn. Seller không đọc hồ sơ người khác hoặc evidence nội bộ. Chống ghi trùng bằng idempotency và chống mất cập nhật bằng expected version. Không làm mất quyết định khi LOS lỗi.
+
+Seller là người vay gắn với shop qua ownership grant. Underwriter là nhân sự ngân hàng làm việc trên lending platform, có quyền nền tảng để thẩm định và quyết định trong phạm vi mini một ngân hàng, không thuộc shop hoặc cần seller grant. Thiết kế DBML ràng buộc actor quyết định với đúng danh tính và role assignment underwriter. Nếu mở nhiều ngân hàng/tenant phải thêm lender scope trước khi dùng chung dữ liệu. Xem [thiết kế auth database](../database/README.md).

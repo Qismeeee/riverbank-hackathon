@@ -8,8 +8,9 @@ Project ezx_riverbank_mini {
     Scope: one marketplace, one partner bank, VND, one shop per seller record,
     one application per lot, one final human decision per application.
     Bank/platform/product settings and approved policy artifacts live in
-    versioned configuration. Authentication uses an external identity provider
-    or explicit development-only test identities; no password tables here.
+    versioned configuration. Authentication uses external OpenID Connect over
+    OAuth 2.0, Authorization Code with PKCE. Local identity/role/seller grants
+    are the authority for application permissions. No passwords or tokens here.
     No credit accounts, disbursement, billing, accounting or debt collection.
 
     JSONB contracts are described below. Validate them in application code.
@@ -59,6 +60,79 @@ Enum handoff_status {
   FAILED
 }
 
+Enum application_role {
+  seller
+  underwriter
+}
+
+Table auth_identities {
+  identity_id uuid [pk]
+  issuer text [not null, note: 'Exact allowlisted OIDC issuer, including any path. Never derive trust from an unverified token.']
+  subject varchar(255) [not null, note: 'Case-sensitive OIDC subject. Verified access-token identity must map to this subject under the agreed provider contract.']
+  is_enabled boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (issuer, subject) [unique]
+  }
+  checks {
+    `length(issuer) > 0 AND length(subject) > 0` [name: 'ck_identity_key']
+    `updated_at >= created_at` [name: 'ck_identity_time']
+  }
+  Note: '''
+    One row per verified (issuer, subject), not per email or shop. Use exact,
+    case-sensitive comparison (deterministic C collation in the migration).
+    Issuer/subject are immutable; never reuse or cascade-delete identity rows.
+    Different issuers or pairwise subjects remain separate identities unless
+    a controlled account-linking process is designed; no automatic email linking.
+    New identities are disabled and have no grants. Only a trusted provisioning
+    process may enable identities or manage grants, with authorization_events.
+    Underwriters are human bank-authorized staff of the lending platform, not
+    shop members. A bank-controlled process verifies staff before granting role.
+    Seller/underwriter roles do not confer permission to administer authorization.
+    Passwords, client secrets, ID/access/refresh tokens, authorization codes,
+    PKCE verifiers and session data are not stored in these business tables.
+    Provider/client/audience/callback and session configuration remain external.
+  '''
+}
+
+Table identity_roles {
+  role_assignment_id uuid [pk]
+  identity_id uuid [not null, ref: > auth_identities.identity_id]
+  role application_role [not null]
+  granted_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  revoked_at timestamptz
+
+  indexes {
+    (identity_id, role)
+    (role_assignment_id, role) [unique]
+    (role_assignment_id, identity_id, role) [unique]
+  }
+  checks {
+    `expires_at IS NULL OR expires_at > granted_at` [name: 'ck_role_expiry']
+    `revoked_at IS NULL OR revoked_at >= granted_at` [name: 'ck_role_revocation']
+  }
+  Note: '''
+    Seller is a borrower acting for an owned shop and additionally requires
+    seller_access_grants. Underwriter is a human on the lending platform:
+    an active underwriter role authorizes the lending queue, assessment and
+    decisions across applications in this single-partner-bank mini platform.
+    Underwriters need no shop ownership or per-shop seller_access_grants.
+    Future multi-bank/tenant deployment must add lender scope before sharing data.
+    Active at time t means granted_at <= t, t < expires_at if set, and t <
+    revoked_at if set. The identity must also be enabled. Recheck each request.
+    Retain history: immutable grants except one-way setting of revoked_at;
+    regrant inserts a new row. Role expiry/revocation ends the corresponding
+    platform permissions and invalidates any child seller scopes.
+    Regrant never transfers scopes from the previous role_assignment_id.
+    Migration must add a partial unique index on (identity_id, role) WHERE
+    revoked_at IS NULL; revoke an expired row before regranting that role.
+    Provision/revoke and the corresponding authorization event commit together.
+  '''
+}
+
 Table sellers {
   seller_id uuid [pk]
   external_shop_ref varchar(128) [not null, unique]
@@ -66,7 +140,75 @@ Table sellers {
   bank_customer_ref varchar(128) [note: 'Optional CIF/reference supplied by partner bank; no local eKYC.']
   created_at timestamptz [not null, default: `now()`]
 
-  Note: 'Mini assumption: one seller record represents one borrowing shop. Multi-shop ownership is deferred.'
+  Note: 'Mini assumption: one seller record represents one borrowing shop. seller_id and external_shop_ref are immutable. API shop_id maps to external_shop_ref through server lookup; never infer ownership from a client-supplied ID. Multi-shop seller records are deferred.'
+}
+
+Table seller_access_grants {
+  access_grant_id uuid [pk]
+  role_assignment_id uuid [not null]
+  role application_role [not null, default: 'seller']
+  seller_id uuid [not null, ref: > sellers.seller_id]
+  granted_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  revoked_at timestamptz
+
+  indexes {
+    (role_assignment_id, seller_id)
+    (seller_id, role_assignment_id)
+  }
+  checks {
+    `role = 'seller'` [name: 'ck_shop_grant_seller_role']
+    `expires_at IS NULL OR expires_at > granted_at` [name: 'ck_access_expiry']
+    `revoked_at IS NULL OR revoked_at >= granted_at` [name: 'ck_access_revocation']
+  }
+  Note: '''
+    Borrower ownership scope only. CHECK and the composite FK restrict the
+    parent assignment to the seller role. No underwriter membership here.
+    No wildcard, NULL seller or automatic ownership of all shops. The server
+    derives identity from that seller assignment and shop from the seller row.
+    Grants require verified ownership. Request fields cannot claim ownership.
+    Apply the same active-time checks as identity_roles, including its parent.
+    Seller lists/views filter by ownership grants before pagination. Check case
+    ownership on nested evidence/documents and seller writes. Underwriter reads
+    and writes follow the platform role, separately from borrower ownership.
+    This is application authorization, not marketplace-data consent.
+    Grant history is immutable except one-way revocation. Migration must add a
+    partial unique index on (role_assignment_id, seller_id) WHERE revoked_at IS
+    NULL; revoke an expired row before regrant. Changes and authorization_events
+    commit together. Seller writes must serialize with disable/revoke actions
+    so revoked borrower ownership cannot win a race using a stale grant.
+  '''
+}
+
+Table authorization_events {
+  authorization_event_id bigint [pk, increment]
+  target_identity_id uuid [not null, ref: > auth_identities.identity_id]
+  role_assignment_id uuid [ref: > identity_roles.role_assignment_id]
+  access_grant_id uuid [ref: > seller_access_grants.access_grant_id]
+  event_type varchar(40) [not null, note: 'IDENTITY_PROVISIONED, IDENTITY_ENABLED, IDENTITY_DISABLED, ROLE_GRANTED, ROLE_REVOKED, SCOPE_GRANTED or SCOPE_REVOKED.']
+  actor_type varchar(20) [not null]
+  actor_identity_id uuid [ref: > auth_identities.identity_id]
+  system_actor_ref varchar(128)
+  reason_code varchar(80) [not null]
+  details jsonb [not null, default: `'{}'::jsonb`, note: 'Sanitized change metadata and provisioning reference; no tokens, secrets or unnecessary PII.']
+  occurred_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (target_identity_id, occurred_at, authorization_event_id)
+  }
+  checks {
+    `(actor_type = 'HUMAN' AND actor_identity_id IS NOT NULL AND system_actor_ref IS NULL) OR (actor_type = 'SYSTEM' AND actor_identity_id IS NULL AND system_actor_ref IS NOT NULL AND length(system_actor_ref) > 0)` [name: 'ck_authorization_actor']
+    `event_type IN ('IDENTITY_PROVISIONED', 'IDENTITY_ENABLED', 'IDENTITY_DISABLED', 'ROLE_GRANTED', 'ROLE_REVOKED', 'SCOPE_GRANTED', 'SCOPE_REVOKED')` [name: 'ck_authorization_event_type']
+  }
+  Note: '''
+    Append-only authorization audit, including initial provisioning/bootstrap.
+    Human actor identity is derived server-side; SYSTEM is a trusted control-plane
+    service, never a substitute identity for making a credit decision.
+    Service validates that referenced role/grant belongs to target_identity_id,
+    that event-specific references are present, and that the actor may provision.
+    Migration must deny update/delete and enforce transaction-bound audit writes.
+    Retain identity/grant rows referenced by audit; no cascading deletes.
+  '''
 }
 
 Table seller_consents {
@@ -236,18 +378,23 @@ Table decisions {
   final_cashflow_result jsonb [note: 'Final deterministic calculation and proposed deduction schedule, using final terms; includes engine/config references and affordability result. Null for rejection.']
   verification_note text [note: 'Required by service before approval of an escalated application.']
   reason text [not null]
-  actor_ref varchar(128) [not null, note: 'Authenticated bank user subject, derived server-side.']
+  actor_identity_id uuid [not null, ref: > auth_identities.identity_id, note: 'Verified human bank identity, derived server-side; resolves to issuer and subject.']
+  authorization_role_assignment_id uuid [not null, note: 'Retained platform role assignment used at decision time. Not a borrower shop grant.']
+  actor_role application_role [not null, default: 'underwriter']
   decided_at timestamptz [not null, default: `now()`]
 
   indexes {
     (decision_id, application_id) [unique]
   }
   checks {
+    `actor_role = 'underwriter'` [name: 'ck_decision_underwriter_role']
     `(decision = 'REJECT' AND final_amount IS NULL AND final_tenor_weeks IS NULL AND final_cashflow_result IS NULL) OR (decision IN ('ACCEPT_PROPOSAL', 'ACCEPT_COUNTER') AND final_amount IS NOT NULL AND final_amount > 0 AND final_tenor_weeks IS NOT NULL AND final_tenor_weeks > 0 AND final_cashflow_result IS NOT NULL)` [name: 'ck_decision_terms']
   }
   Note: '''
     One immutable final decision per application for the mini project.
-    In one transaction: authorize user, lock/check application version, verify
+    Composite FK binds actor identity to the retained underwriter assignment.
+    In one transaction: verify enabled identity and live platform underwriter
+    role, lock/check application version, verify
     selected run/documents, recompute affordability for final terms, insert decision,
     set ACCEPTED/REJECTED and append event. No approval for NO_LOAN_NEEDED.
     Verify escalated cases before approval; never let the LLM write decisions.
@@ -282,7 +429,8 @@ Table application_events {
   previous_status application_status
   next_status application_status
   actor_type varchar(20) [not null, note: 'HUMAN or SYSTEM.']
-  actor_ref varchar(128) [not null]
+  actor_identity_id uuid [ref: > auth_identities.identity_id]
+  system_actor_ref varchar(128) [note: 'Stable internal service name for SYSTEM events only.']
   reason_code varchar(80)
   evidence_ids jsonb [not null, default: `'[]'::jsonb`]
   details jsonb [not null, default: `'{}'::jsonb`, note: 'Non-sensitive run/decision/handoff references and error codes. No raw prompts or bank account details.']
@@ -292,7 +440,7 @@ Table application_events {
     (application_id, occurred_at, event_id)
   }
   checks {
-    `actor_type IN ('HUMAN', 'SYSTEM')` [name: 'ck_event_actor']
+    `(actor_type = 'HUMAN' AND actor_identity_id IS NOT NULL AND system_actor_ref IS NULL) OR (actor_type = 'SYSTEM' AND actor_identity_id IS NULL AND system_actor_ref IS NOT NULL AND length(system_actor_ref) > 0)` [name: 'ck_event_actor']
     `event_type <> 'STATE_CHANGED' OR next_status IS NOT NULL` [name: 'ck_state_event']
   }
   Note: 'Append-only: enforce DB privileges or triggers in the migration, no user update/delete API. Validate evidence references belong to this application. A state event commits with its application update.'
@@ -303,3 +451,5 @@ Ref: evidence.(run_id, application_id) > assessment_runs.(run_id, application_id
 Ref: generated_documents.(run_id, application_id) > assessment_runs.(run_id, application_id)
 Ref: decisions.(generated_document_id, run_id, application_id) > generated_documents.(document_id, run_id, application_id)
 Ref: handoffs.(decision_id, application_id) > decisions.(decision_id, application_id)
+Ref: seller_access_grants.(role_assignment_id, role) > identity_roles.(role_assignment_id, role)
+Ref: decisions.(authorization_role_assignment_id, actor_identity_id, actor_role) > identity_roles.(role_assignment_id, identity_id, role)

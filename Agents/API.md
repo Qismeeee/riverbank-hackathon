@@ -6,7 +6,6 @@ Contract tích hợp cho seller, lender và studio. Tham khảo [API chi tiết]
 
 | Method | Path | Vai trò |
 |---|---|---|
-| POST | `/v1/auth/token` | Đăng nhập demo ở chế độ token |
 | GET | `/v1/auth/me` | Chủ thể đã xác thực |
 | POST | `/v1/copilot/extract-plan` | Seller, trả draft để xác nhận |
 | POST | `/v1/cases` | Seller, tạo và thẩm định |
@@ -27,7 +26,11 @@ Các API mở rộng gồm `copilot/ask`, `webhooks/los-status`, `simulate-p7-ev
 
 ## Quy ước client
 
-Prod theo thiết kế dùng Bearer token. Header role chỉ phục vụ mode local phù hợp. Không đặt passcode/signing key trong source FE. Token hết hạn đưa về đăng nhập. Seller đọc seller-view, không dùng chi tiết nội bộ để ẩn dữ liệu bằng CSS.
+Đăng nhập người dùng theo OpenID Connect trên OAuth 2.0, sử dụng Authorization Code với PKCE. Authorization server cung cấp endpoint cấp token; không giả định Riverbank có `POST /v1/auth/token`. Nhà cung cấp, cấu hình client, callback và cách quản lý session cần được chốt trước khi tích hợp. API là resource server, kiểm access token dành cho API theo contract của issuer (gồm issuer, audience, hiệu lực và chữ ký với JWT hoặc introspection cho opaque token); không dùng ID token thay access token. Token không hợp lệ hoặc không kiểm chứng được phải bị từ chối.
+
+Role seller/underwriter và quyền seller/shop phải được xác định phía server từ danh tính đã xác thực và nguồn quyền đáng tin cậy; không tin role hoặc scope do client tự khai. Consent OAuth cho đăng nhập không thay consent riêng để đọc dữ liệu sàn. Không đặt client secret, signing key hoặc token trong source hay log. Token hết hạn xử lý theo session đã thiết kế, nếu không gia hạn được thì đăng nhập lại. Seller đọc seller-view, không dùng chi tiết nội bộ để ẩn dữ liệu bằng CSS. Cơ chế demo nếu có phải tách biệt và không bật ngoài môi trường local/test.
+
+Thiết kế schema mini dùng DB làm nguồn quyền: `auth_identities` ánh xạ `(issuer, subject)` đã xác minh; `identity_roles` cung cấp role đang có hiệu lực. Seller là người vay, cần thêm ownership grant tại `seller_access_grants`; server tra `shop_id` qua seller record và lọc danh sách seller trước phân trang. Underwriter là nhân sự ngân hàng trên lending platform: role underwriter cấp quyền queue, thẩm định, evidence và quyết định trong nền tảng mini một ngân hàng, không cần sở hữu hoặc được gắn với shop. Kiểm evidence/document thuộc đúng hồ sơ và kiểm quyền trên mọi lệnh ghi; dữ liệu sàn luôn cần consent riêng. Các bảng mới hiện là thiết kế DBML; chưa có resolver DB hoặc migration, helper Python hiện tại cần tách role nền tảng và ownership seller trước khi tích hợp. Xem [thiết kế auth](../database/README.md).
 
 Tạo hồ sơ và quyết định gửi `Idempotency-Key`. Retry cùng thao tác giữ nguyên key và payload. Thao tác mới tạo key mới. Lệnh thay đổi hồ sơ gửi `expected_version` mới nhất theo schema, riêng tạo case chưa có version. Gặp conflict đọc lại và để người dùng xác nhận trên dữ liệu mới.
 
