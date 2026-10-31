@@ -1,41 +1,31 @@
-# secrets, never commit
+# Local configuration and credentials
 .env
-.env.local
+.env.*
+!.env.example
+.aws/
 *.pem
-riverbank-ci*
+*.key
+*_accessKeys.csv
 
-# python
-__pycache__/
-*.pyc
+# Python environments, tooling and generated files
 .venv/
+.venv-*/
+.tools/
+.tools-*/
+.cache/
+__pycache__/
+*.py[cod]
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 *.egg-info/
+build/
+dist/
 
-# data and models
-data/raw/
-*.duckdb
-*.pkl
-
-# node (web/)
-web/node_modules/
-web/.next/
-
-# editors
-.vscode/
+# Editor and OS files
 .idea/
+.vscode/
 .DS_Store
-
-# synthetic output
-data/synth/out/
-data/synth/train/
-data/synth/test/
-data/exports/
-data/statements/
-
-# llm eval cache and reports
-eval/.cache/
-eval/out/
-
-# sample dossiers output
-eval/dossiers/out/
+Thumbs.db
+*.log

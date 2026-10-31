@@ -1,27 +1,145 @@
-name: ci
+name: CI/CD
 
+# Branch pushes are checked through their PR; main is checked after merge.
 on:
-  pull_request:
   push:
-    branches-ignore: [main]
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # PR runs can be replaced; main runs must finish any active deployment.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: api
+  quality:
+    name: Quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: api/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
-      - name: lint
-        run: ruff check . ../eval ../data/synth && ruff format --check . ../eval ../data/synth
-      - name: test
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: "0.13.6"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install Python 3.12
+        run: uv python install
+      - name: Install locked dependencies
+        run: make sync
+      - name: Lint, format and offline HTTP tests
+        run: make test
+
+  docker:
+    name: Docker ARM64
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build Linux ARM64 image without publishing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          push: false
+          tags: riverbank-hackathon:base-01
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start container and check HTTP health
+        run: python3 scripts/docker_smoke.py --platform linux/arm64
+      - name: Validate deployment configuration
         env:
-          RIVERBANK_ENV: local
-        run: pytest -q
+          API_IMAGE: riverbank-hackathon:base-01
+          SITE_ADDRESS: localhost
+          CLOUDWATCH_LOG_GROUP: /riverbank-hackathon/app
+        run: |
+          docker compose -f infra/compose.yaml config --quiet
+          docker compose -f infra/compose.yaml -f infra/compose.aws.yaml config --quiet
+          docker run --rm --platform linux/arm64 \
+            -e SITE_ADDRESS=localhost \
+            -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5 \
+            caddy validate --config /etc/caddy/Caddyfile
+
+  deploy:
+    name: Deploy EC2
+    needs: docker
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'pull_request' && vars.ENABLE_DEPLOY == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+      SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validate production settings
+        run: |
+          for name in EC2_HOST EC2_USER EC2_SSH_KEY EC2_KNOWN_HOSTS SITE_ADDRESS; do
+            if [ -z "${!name}" ]; then echo "Missing production setting: $name" >&2; exit 1; fi
+          done
+          [[ "$EC2_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$EC2_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$SITE_ADDRESS" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish tested commit using the CI build cache
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+      - name: Transfer release and deploy with rollback
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          key="$RUNNER_TEMP/deploy-key"
+          known_hosts="$RUNNER_TEMP/known-hosts"
+          trap 'rm -f -- "$key" "$known_hosts"' EXIT
+          umask 077
+          printf '%s\n' "$EC2_SSH_KEY" > "$key"
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > "$known_hosts"
+          ssh_options=(-i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=10
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          target="$EC2_USER@$EC2_HOST"
+          release="/opt/riverbank-hackathon/releases/$GITHUB_SHA"
+          ssh "${ssh_options[@]}" "$target" "mkdir -p '$release'"
+          scp "${ssh_options[@]}" infra/compose.yaml infra/compose.aws.yaml infra/Caddyfile infra/deploy.sh "$target:$release/"
+          printf '%s\n' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$target" \
+            "bash '$release/deploy.sh' '$IMAGE' 'https://$SITE_ADDRESS/health' '$GHCR_USER'"
