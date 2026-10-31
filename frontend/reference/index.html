@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezXRiverbank · Bán đắt hàng vẫn có thể hết tiền</title>
+  <meta name="description" content="ezXRiverbank tính đúng khoảng thiếu tiền của từng lô hàng, đề xuất khoản vay vừa đủ, trả tự động từ tiền bán hàng. AI phân tích, người của ngân hàng quyết định." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="assets/shared.js"></script>
+  <link rel="stylesheet" href="assets/shared.css" />
+  <style>
+    html { scroll-behavior: smooth; }
+    section[id] { scroll-margin-top: 72px; }
+    .term { text-decoration: underline dotted rgba(148, 163, 184, .7); text-underline-offset: 3px; cursor: help; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-300 min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 grid-bg pointer-events-none" aria-hidden="true"></div>
+  <div class="absolute -top-32 -left-20 w-[520px] h-[520px] bg-brand-600/20 blur-3xl rounded-full pointer-events-none" aria-hidden="true"></div>
+  <div class="absolute top-40 right-0 w-[480px] h-[420px] bg-teal-500/10 blur-3xl rounded-full pointer-events-none" aria-hidden="true"></div>
+  <div id="app-header" class="relative z-40"></div>
+
+  <main class="relative max-w-7xl mx-auto px-4 sm:px-6">
+
+    <!-- Hero -->
+    <section class="grid lg:grid-cols-12 gap-10 items-center pt-14 pb-12">
+      <div class="lg:col-span-6">
+        <div class="inline-flex items-center gap-2 text-xs text-slate-300 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>Vốn nhập hàng cho người bán trên sàn thương mại điện tử
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-semibold text-white tracking-tight leading-[1.1] mt-5">
+          Bán đắt hàng<br />vẫn có thể hết tiền.<br /><span class="bg-gradient-to-r from-brand-400 to-amber-300 bg-clip-text text-transparent">Chúng tôi lấp đúng khoảng trống đó.</span>
+        </h1>
+        <p class="text-lg text-slate-400 mt-5 max-w-xl">Người bán phải trả xưởng ngay hôm nay, nhưng tiền bán hàng từ sàn về rải rác trong nhiều tuần. ezXRiverbank đọc dữ liệu bán hàng thật, tính chính xác <b class="text-white font-medium">thiếu bao nhiêu, thiếu mấy tuần</b>, rồi đề xuất khoản vay vừa đủ. Người của ngân hàng xem bằng chứng và ký duyệt trong vài phút.</p>
+
+        <div class="mt-6 rounded-2xl border border-brand-500/30 bg-brand-500/10 p-4 max-w-xl">
+          <div class="text-[11px] uppercase tracking-wider text-brand-300 font-medium">Tóm tắt một câu</div>
+          <p class="text-sm text-slate-200 mt-1">Khoản vay ngắn hạn tính theo <b class="text-white">từng lô hàng</b>, trả tự động từ <b class="text-white">tiền bán hàng mỗi tuần</b>. AI làm phần phân tích, <b class="text-white">con người ra quyết định</b>.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 mt-7">
+          <a href="#thu" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl px-5 py-3 text-sm font-medium transition-colors shadow-lg shadow-brand-900/40">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Tự thử trong 30 giây
+          </a>
+          <a href="01-seller-portal.html" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl px-5 py-3 text-sm font-medium transition-colors">
+            <i data-lucide="play" class="w-4 h-4"></i>Xem demo sản phẩm
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero visual: the cash valley -->
+      <div class="lg:col-span-6">
+        <div class="relative bg-slate-900/80 border border-white/10 rounded-3xl p-6 shadow-2xl">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="flex items-center gap-1.5"><i data-lucide="shirt" class="w-3.5 h-3.5"></i>Chị Lan bán áo trên Shopee · nhập lô 200tr</span>
+            <span class="mono text-slate-500">Ví dụ thật trong demo</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-5">
+            <div class="rounded-2xl bg-white/5 p-4">
+              <div class="text-[11px] text-slate-400">Chị Lan định xin vay</div>
+              <div class="text-2xl font-semibold text-slate-500 line-through decoration-2 tnum mt-1">150tr</div>
+            </div>
+            <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4">
+              <div class="text-[11px] text-rose-300">Thực ra chỉ thiếu</div>
+              <div class="text-2xl font-semibold text-rose-300 tnum mt-1" id="h-gap">0tr</div>
+            </div>
+            <div class="rounded-2xl bg-brand-500/10 border border-brand-500/30 p-4">
+              <div class="text-[11px] text-brand-300">Đề xuất vay</div>
+              <div class="text-2xl font-semibold text-white tnum mt-1" id="h-offer">0tr</div>
+            </div>
+          </div>
+          <svg id="h-chart" viewBox="0 0 520 200" class="w-full mt-5" role="img" aria-label="Tiền trong túi chị Lan theo từng tuần: âm 80 triệu ở tuần 0, dương lại từ tuần 2"></svg>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 mt-1">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>Tuần bị âm tiền</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-teal-500/60"></span>Tuần dư tiền</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-brand-400"></span>Sau khi vay 90tr</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-4 text-xs">
+            <div class="flex items-center gap-2 text-slate-400"><i data-lucide="calendar-range" class="w-4 h-4 text-slate-500 shrink-0"></i><span>Trả xong trong <b class="text-white">8 tuần</b></span></div>
+            <div class="flex items-center gap-2 text-slate-400"><i data-lucide="repeat" class="w-4 h-4 text-slate-500 shrink-0"></i><span>Tự trừ <b class="text-white">12tr/tuần</b> từ tiền bán</span></div>
+            <div class="flex items-center gap-2 text-slate-400"><i data-lucide="file-x" class="w-4 h-4 text-slate-500 shrink-0"></i><span><b class="text-white">Không</b> cần sao kê</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem -->
+    <section id="van-de" class="py-14">
+      <div class="max-w-3xl">
+        <div class="text-xs uppercase tracking-wider text-rose-300 font-medium">Vấn đề</div>
+        <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Tiền phải chi đi trước, tiền bán hàng về sau</h2>
+        <p class="text-slate-400 mt-3">Giống một quán ăn phải trả tiền chợ buổi sáng nhưng tối mới thu tiền khách. Người bán online gặp đúng chuyện đó, chỉ là khoảng chờ kéo dài nhiều tuần. Họ không thiếu tiền vì bán kém. Họ thiếu tiền vì <b class="text-white font-medium">lịch chi và lịch thu lệch nhau</b>.</p>
+      </div>
+
+      <ol class="grid md:grid-cols-3 gap-4 mt-8">
+        <li class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-3">
+            <span class="mono text-xs text-slate-500">Tuần 0</span>
+            <span class="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-300 flex items-center justify-center"><i data-lucide="factory" class="w-5 h-5"></i></span>
+          </div>
+          <div class="text-white font-medium mt-4">Xưởng đòi trả đủ 200tr ngay</div>
+          <p class="text-sm text-slate-400 mt-1">Chị Lan có 120tr. Không trả đủ thì không lấy được hàng cho mùa cao điểm.</p>
+        </li>
+        <li class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-3">
+            <span class="mono text-xs text-slate-500">Tuần 1 đến 6</span>
+            <span class="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-300 flex items-center justify-center"><i data-lucide="hand-coins" class="w-5 h-5"></i></span>
+          </div>
+          <div class="text-white font-medium mt-4">Tiền bán về khoảng 70tr mỗi tuần</div>
+          <p class="text-sm text-slate-400 mt-1">Sàn chỉ chuyển tiền (<span class="term" title="Tiền sàn chuyển cho người bán sau khi đơn đã giao thành công">payout</span>) sau khi khách nhận hàng. Hàng tốt, bán chạy, nhưng tiền về từ từ.</p>
+        </li>
+        <li class="bg-rose-500/10 border border-rose-500/25 rounded-2xl p-6">
+          <div class="flex items-center gap-3">
+            <span class="mono text-xs text-rose-300/80">Kết quả</span>
+            <span class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-200 flex items-center justify-center"><i data-lucide="trending-down" class="w-5 h-5"></i></span>
+          </div>
+          <div class="text-white font-medium mt-4">Hụt 80tr, nhưng chỉ trong 2 tuần</div>
+          <p class="text-sm text-slate-300 mt-1">Đó là "thung lũng tiền mặt". Từ tuần thứ 2, chị Lan dư tiền trở lại.</p>
+        </li>
+      </ol>
+
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-2 text-white font-medium"><i data-lucide="store" class="w-5 h-5 text-brand-400"></i>Người bán chỉ có những lựa chọn tệ</div>
+          <ul class="mt-4 space-y-3 text-sm text-slate-400">
+            <li class="flex gap-2.5"><i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i><span>Vay theo gói có sẵn: hạn mức tính trên doanh thu quá khứ, kỳ hạn <b class="text-slate-200">3 đến 24 tháng</b>, trả góp cố định mỗi tháng. Cần 80tr trong 2 tuần nhưng phải gánh nợ cả năm.</span></li>
+            <li class="flex gap-2.5"><i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i><span>Tự chứng minh thu nhập bằng ảnh chụp doanh thu và sao kê, chờ nhiều ngày.</span></li>
+            <li class="flex gap-2.5"><i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i><span>Nhập ít hàng đi, và mất doanh thu đúng mùa bán chạy nhất.</span></li>
+          </ul>
+        </div>
+        <div class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-2 text-white font-medium"><i data-lucide="landmark" class="w-5 h-5 text-teal-400"></i>Ngân hàng muốn cho vay nhưng nhìn không rõ</div>
+          <ul class="mt-4 space-y-3 text-sm text-slate-400">
+            <li class="flex gap-2.5"><i data-lucide="eye-off" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i><span>Không thấy dữ liệu bán hàng trên sàn, nên phải thẩm định thủ công, chậm và dè dặt.</span></li>
+            <li class="flex gap-2.5"><i data-lucide="eye-off" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i><span>Không biết người bán thật sự cần bao nhiêu, nên dễ cho vay quá tay hoặc từ chối nhầm người tốt.</span></li>
+            <li class="flex gap-2.5"><i data-lucide="eye-off" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i><span>Muốn dùng AI cho nhanh, nhưng luật yêu cầu người có thẩm quyền chịu trách nhiệm quyết định.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Simulator -->
+    <section id="thu" class="py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="max-w-3xl">
+          <div class="text-xs uppercase tracking-wider text-brand-300 font-medium">Tự tay thử</div>
+          <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Kéo thanh trượt, xem thung lũng tiền mặt thay đổi</h2>
+          <p class="text-slate-400 mt-3">Đây là đúng công thức hệ thống dùng để thẩm định. Thử bấm <b class="text-white font-medium">"Thương lượng cọc 50%"</b>: khoản thiếu biến mất và hệ thống khuyên <b class="text-white font-medium">không cần vay</b>.</p>
+        </div>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Tình huống mẫu">
+          <button data-preset="B" class="preset flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2 text-sm text-white cursor-pointer transition-colors"><i data-lucide="factory" class="w-4 h-4"></i>Xưởng đòi trả hết ngay</button>
+          <button data-preset="A" class="preset flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2 text-sm text-white cursor-pointer transition-colors"><i data-lucide="handshake" class="w-4 h-4"></i>Thương lượng cọc 50%</button>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-12 gap-4 mt-8">
+        <form id="sim" class="lg:col-span-4 bg-slate-900/70 border border-white/10 rounded-2xl p-6 space-y-5" onsubmit="return false">
+          <div>
+            <div class="flex justify-between text-sm"><label for="s-lot" class="text-slate-300">Giá trị lô hàng</label><b id="s-lot-v" class="text-white tnum"></b></div>
+            <input id="s-lot" type="range" min="50" max="500" step="10" value="200" class="w-full mt-2" />
+          </div>
+          <div>
+            <div class="flex justify-between text-sm"><label for="s-cash" class="text-slate-300">Tiền đang có sẵn</label><b id="s-cash-v" class="text-white tnum"></b></div>
+            <input id="s-cash" type="range" min="0" max="300" step="10" value="120" class="w-full mt-2" />
+          </div>
+          <div>
+            <div class="flex justify-between text-sm"><label for="s-dep" class="text-slate-300">Trả trước cho xưởng</label><b id="s-dep-v" class="text-white tnum"></b></div>
+            <input id="s-dep" type="range" min="0" max="100" step="10" value="100" class="w-full mt-2" />
+          </div>
+          <div id="s-rem-row">
+            <div class="flex justify-between text-sm"><label for="s-rem" class="text-slate-300">Trả nốt phần còn lại vào</label><b id="s-rem-v" class="text-white tnum"></b></div>
+            <input id="s-rem" type="range" min="1" max="6" step="1" value="4" class="w-full mt-2" />
+          </div>
+          <div>
+            <div class="flex justify-between text-sm"><label for="s-weeks" class="text-slate-300">Bán hết hàng trong</label><b id="s-weeks-v" class="text-white tnum"></b></div>
+            <input id="s-weeks" type="range" min="3" max="12" step="1" value="6" class="w-full mt-2" />
+          </div>
+          <div>
+            <div class="flex justify-between text-sm"><label for="s-pay" class="text-slate-300">Tiền sàn chuyển về mỗi tuần</label><b id="s-pay-v" class="text-white tnum"></b></div>
+            <input id="s-pay" type="range" min="20" max="150" step="5" value="70" class="w-full mt-2" />
+            <div class="text-[11px] text-slate-500 mt-1.5">Trong sản phẩm thật, con số này lấy từ lịch sử 12 tuần trên sàn, không phải người bán tự khai.</div>
+          </div>
+        </form>
+
+        <div class="lg:col-span-8 bg-slate-900/70 border border-white/10 rounded-2xl p-6 flex flex-col">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="flex items-center gap-1.5"><i data-lucide="wallet" class="w-3.5 h-3.5"></i>Tiền trong túi người bán, cuối mỗi tuần</span>
+            <span class="flex items-center gap-3">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>Âm</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-teal-500/60"></span>Dư</span>
+              <span id="s-legend-loan" class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-brand-400"></span>Nếu vay</span>
+            </span>
+          </div>
+          <svg id="s-chart" viewBox="0 0 640 230" class="w-full mt-3" role="img" aria-label="Biểu đồ số dư tiền mặt theo tuần"></svg>
+          <div id="s-verdict" class="mt-4" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison -->
+    <section id="so-sanh" class="py-14">
+      <div class="max-w-3xl">
+        <div class="text-xs uppercase tracking-wider text-teal-300 font-medium">Khác gì cách vay hiện nay</div>
+        <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Đo đúng lô hàng, không đo cả cửa hàng</h2>
+        <p class="text-slate-400 mt-3">Các gói vay cho người bán trên sàn hiện nay cấp một hạn mức chung dựa trên doanh thu quá khứ. ezXRiverbank nhìn vào dòng tiền từng tuần của đúng lô hàng đang cần vốn.</p>
+      </div>
+      <div class="mt-8 rounded-2xl border border-white/10 overflow-hidden">
+        <div class="grid grid-cols-12 bg-white/5 text-xs uppercase tracking-wider text-slate-400">
+          <div class="col-span-12 sm:col-span-3 px-5 py-3 hidden sm:block">Tiêu chí</div>
+          <div class="col-span-6 sm:col-span-4 px-5 py-3">Gói vay hiện có</div>
+          <div class="col-span-6 sm:col-span-5 px-5 py-3 text-brand-300">ezXRiverbank</div>
+        </div>
+        <div id="cmp" class="divide-y divide-white/5"></div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-3">Tham chiếu: gói cho vay người bán phổ biến trên sàn hiện nay, kỳ hạn 3 đến 24 tháng, trả góp hằng tháng, bên cho vay là tổ chức tín dụng.</p>
+    </section>
+
+    <!-- Novelty -->
+    <section id="diem-moi" class="py-14">
+      <div class="max-w-3xl">
+        <div class="text-xs uppercase tracking-wider text-violet-300 font-medium">Điểm mới</div>
+        <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Bốn ý tưởng làm nên ezXRiverbank</h2>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 mt-8">
+        <article class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-start gap-4">
+            <span class="mono text-sm text-brand-400 pt-1">01</span>
+            <div>
+              <div class="text-lg font-semibold text-white">Vay theo từng lô hàng, trả theo nhịp bán</div>
+              <p class="text-sm text-slate-400 mt-2">Số tiền bằng đúng khoảng thiếu cộng 10% dự phòng. Kỳ hạn bằng số tuần thiếu cộng 2 tuần đệm. Mỗi tuần tự trừ không quá 25% tiền bán về ở kịch bản xấu, nên tuần bán chậm vẫn không bị ngộp.</p>
+              <div class="text-xs text-slate-500 mt-3 flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i>Người bán vay ít hơn, xong nợ trong vài tuần thay vì cả năm.</div>
+            </div>
+          </div>
+        </article>
+        <article class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-start gap-4">
+            <span class="mono text-sm text-brand-400 pt-1">02</span>
+            <div>
+              <div class="text-lg font-semibold text-white">Dám nói "bạn không cần vay"</div>
+              <p class="text-sm text-slate-400 mt-2">Nếu không tuần nào bị âm tiền, hệ thống dừng ngay, gợi ý cách thương lượng với xưởng và đặt cảnh báo. Nó không tra lịch sử tín dụng (<span class="term" title="Trung tâm Thông tin Tín dụng Quốc gia. Mỗi lần tra cứu tốn phí và để lại dấu trong hồ sơ tín dụng">CIC</span>), nên ngân hàng không mất phí và hồ sơ người bán không bị để lại dấu tra cứu.</p>
+              <div class="text-xs text-slate-500 mt-3 flex items-center gap-1.5"><i data-lucide="heart-handshake" class="w-3.5 h-3.5"></i>Sản phẩm tài chính đứng về phía người vay.</div>
+            </div>
+          </div>
+        </article>
+        <article class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-start gap-4">
+            <span class="mono text-sm text-brand-400 pt-1">03</span>
+            <div>
+              <div class="text-lg font-semibold text-white">Mỗi con số đều bấm được để xem bằng chứng</div>
+              <p class="text-sm text-slate-400 mt-2">Tính toán do code thực hiện, AI chỉ viết lời giải thích. Mọi câu có số trong báo cáo thẩm định đều gắn mã bằng chứng (E1 đến E7) trỏ về dữ liệu gốc không sửa được. AI không thể "bịa" một con số.</p>
+              <div class="text-xs text-slate-500 mt-3 flex items-center gap-1.5"><i data-lucide="link" class="w-3.5 h-3.5"></i>Thẩm định viên đọc và tin hồ sơ trong vài phút.</div>
+            </div>
+          </div>
+        </article>
+        <article class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-start gap-4">
+            <span class="mono text-sm text-brand-400 pt-1">04</span>
+            <div>
+              <div class="text-lg font-semibold text-white">AI không bao giờ tự duyệt. Chính sách sửa được bằng lời</div>
+              <p class="text-sm text-slate-400 mt-2">Người của ngân hàng luôn bấm nút cuối, đúng yêu cầu của Thông tư 06/2023. Khi ngân hàng muốn đổi chính sách, họ viết một dòng tiếng Việt: Codex sinh lại luật dưới dạng code, sinh test, và chạy lại 100 hồ sơ mẫu để cho thấy quyết định nào sẽ thay đổi.</p>
+              <div class="text-xs text-slate-500 mt-3 flex items-center gap-1.5"><i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i>Đổi khẩu vị rủi ro trong vài phút, có kiểm chứng trước khi áp dụng.</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="cach-hoat-dong" class="py-14">
+      <div class="max-w-3xl">
+        <div class="text-xs uppercase tracking-wider text-sky-300 font-medium">Cách hoạt động</div>
+        <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Từ tin nhắn đến tiền về xưởng trong khoảng 3 phút</h2>
+      </div>
+      <ol class="grid md:grid-cols-4 gap-4 mt-8">
+        <li class="relative bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <span class="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-300 flex items-center justify-center"><i data-lucide="message-circle" class="w-5 h-5"></i></span>
+          <div class="text-white font-medium mt-4">1. Người bán nhắn kế hoạch</div>
+          <p class="text-sm text-slate-400 mt-1">"Lô 200tr, có 120tr, xưởng đòi trả hết, bán 6 tuần." Số điện thoại, CCCD bị che trước khi gửi cho AI.</p>
+        </li>
+        <li class="relative bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <span class="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-300 flex items-center justify-center"><i data-lucide="chart-column" class="w-5 h-5"></i></span>
+          <div class="text-white font-medium mt-4">2. Hệ thống tính dòng tiền</div>
+          <p class="text-sm text-slate-400 mt-1">Đọc tiền bán hàng 12 tuần trên sàn (có đồng ý của người bán), dựng số dư từng tuần ở kịch bản thường và kịch bản xấu.</p>
+        </li>
+        <li class="relative bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <span class="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-300 flex items-center justify-center"><i data-lucide="fingerprint" class="w-5 h-5"></i></span>
+          <div class="text-white font-medium mt-4">3. Người ngân hàng ký duyệt</div>
+          <p class="text-sm text-slate-400 mt-1">Thẩm định viên đọc báo cáo có bằng chứng, bấm vào từng con số để kiểm tra, rồi ký số. Có thể sửa số tiền hoặc từ chối.</p>
+        </li>
+        <li class="relative bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <span class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center"><i data-lucide="banknote" class="w-5 h-5"></i></span>
+          <div class="text-white font-medium mt-4">4. Tiền chuyển thẳng cho xưởng</div>
+          <p class="text-sm text-slate-400 mt-1">Hệ thống của ngân hàng điền hợp đồng mẫu, người bán ký OTP, tiền giải ngân. Mỗi tuần tự trừ một phần nhỏ từ tiền bán hàng.</p>
+        </li>
+      </ol>
+
+      <details class="group mt-4 bg-slate-900/50 border border-white/10 rounded-2xl">
+        <summary class="flex items-center justify-between gap-3 px-6 py-4 cursor-pointer list-none text-sm text-white">
+          <span class="flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4 text-violet-300"></i>Dành cho giám khảo kỹ thuật: 8 bước bên dưới, ai làm bước nào</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+        <div class="px-6 pb-6">
+          <p class="text-sm text-slate-400">Tính toán là code. Phân loại nhanh dùng mô hình nhỏ. LLM chỉ viết chữ. Người của ngân hàng giữ nút cuối cùng. Nhờ vậy chi phí AI chỉ khoảng <b class="text-white">$0,008</b> mỗi hồ sơ.</p>
+          <ol class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mt-5" id="pipe"></ol>
+          <div class="flex flex-wrap gap-4 text-xs text-slate-500 mt-4">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>Code thường, $0</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-violet-400"></span>Mô hình nhỏ Jev System-1</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>LLM viết chữ</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>Ngân hàng</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Proof stats -->
+    <section class="py-6">
+      <div class="text-xs text-slate-500 mb-3">Đo trên bản demo</div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden border border-white/10">
+        <div class="bg-slate-950 p-6"><div class="text-3xl font-semibold text-white tnum" data-count="3" data-suffix=" phút">0</div><div class="text-sm text-slate-400 mt-1">Từ lúc người bán nhắn tin đến lúc giải ngân</div></div>
+        <div class="bg-slate-950 p-6"><div class="text-3xl font-semibold text-white tnum" data-count="0.008" data-dec="3" data-prefix="$">0</div><div class="text-sm text-slate-400 mt-1">Chi phí AI cho mỗi hồ sơ</div></div>
+        <div class="bg-slate-950 p-6"><div class="text-3xl font-semibold text-white tnum" data-count="100" data-suffix="%">0</div><div class="text-sm text-slate-400 mt-1">Câu có số trong báo cáo trỏ về bằng chứng gốc</div></div>
+        <div class="bg-slate-950 p-6"><div class="text-3xl font-semibold text-emerald-400 tnum" data-count="0">0</div><div class="text-sm text-slate-400 mt-1">Quyết định do AI tự đưa ra. Người của ngân hàng bấm 100%</div></div>
+      </div>
+    </section>
+
+    <!-- Who wins -->
+    <section id="ai-duoc-loi" class="py-14">
+      <div class="max-w-3xl">
+        <div class="text-xs uppercase tracking-wider text-emerald-300 font-medium">Ai được lợi</div>
+        <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Ba bên cùng thắng</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4 mt-8">
+        <div class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-2 text-white font-medium"><i data-lucide="store" class="w-5 h-5 text-brand-400"></i>Người bán</div>
+          <ul class="mt-4 space-y-2.5 text-sm text-slate-400">
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Có vốn nhập hàng trong vài phút, không nộp giấy tờ</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Vay đúng số thiếu, trả xong trong vài tuần</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Biết rõ tổng phải trả và mỗi tuần bị trừ bao nhiêu</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Được khuyên không vay khi không cần</li>
+          </ul>
+        </div>
+        <div class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-2 text-white font-medium"><i data-lucide="landmark" class="w-5 h-5 text-teal-400"></i>Ngân hàng</div>
+          <ul class="mt-4 space-y-2.5 text-sm text-slate-400">
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Thấy dữ liệu bán hàng thật thay vì ảnh chụp</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Khoản vay nhỏ, ngắn, có nguồn trả nợ tự động từ sàn</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Chỉ tốn phí tra cứu tín dụng khi hồ sơ thật sự cần vay</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Giữ quyền quyết định, hợp đồng và giải ngân như hiện nay</li>
+          </ul>
+        </div>
+        <div class="bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+          <div class="flex items-center gap-2 text-white font-medium"><i data-lucide="shopping-bag" class="w-5 h-5 text-violet-300"></i>Sàn thương mại điện tử</div>
+          <ul class="mt-4 space-y-2.5 text-sm text-slate-400">
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Người bán đủ hàng cho mùa cao điểm, doanh số tăng</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Không phải đứng ra cho vay hay chịu rủi ro nợ</li>
+            <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>Dữ liệu chỉ được dùng khi người bán đồng ý</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Demo screens -->
+    <section id="demo" class="py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-brand-300 font-medium">Demo</div>
+          <h2 class="text-3xl font-semibold text-white mt-2 tracking-tight">Ba màn hình, một bộ số</h2>
+          <p class="text-sm text-slate-400 mt-2">Người bán, thẩm định viên và cán bộ chính sách cùng nhìn vào những con số đã khóa.</p>
+        </div>
+        <button id="dual" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors">
+          <i data-lucide="columns-2" class="w-4 h-4"></i>Mở Người bán và Ngân hàng song song
+        </button>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <a href="01-seller-portal.html" class="group relative bg-slate-900/70 border border-white/10 hover:border-brand-500/60 rounded-2xl p-6 transition-colors duration-200">
+          <div class="w-11 h-11 rounded-xl bg-brand-500/15 text-brand-400 flex items-center justify-center"><i data-lucide="store" class="w-5 h-5"></i></div>
+          <div class="text-xs text-slate-500 mt-5">Màn hình người bán</div>
+          <div class="text-lg font-semibold text-white">Seller Copilot</div>
+          <p class="text-sm text-slate-400 mt-1">Nhắn kế hoạch bằng lời thường. Thấy ngay có cần vay không, thiếu bao nhiêu, kéo thanh trượt để thử thương lượng với xưởng.</p>
+          <span class="absolute top-6 right-6 text-slate-600 group-hover:text-brand-400 transition-colors"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></span>
+        </a>
+        <a href="02-lender-cockpit.html" class="group relative bg-slate-900/70 border border-white/10 hover:border-teal-500/60 rounded-2xl p-6 transition-colors duration-200">
+          <div class="w-11 h-11 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center"><i data-lucide="landmark" class="w-5 h-5"></i></div>
+          <div class="text-xs text-slate-500 mt-5">Màn hình thẩm định viên ngân hàng</div>
+          <div class="text-lg font-semibold text-white">Underwriting Cockpit</div>
+          <p class="text-sm text-slate-400 mt-1">Báo cáo mà mỗi câu có số đều bấm được để xem bằng chứng gốc. Ký số một lần, hồ sơ chuyển sang hệ thống ngân hàng ngay.</p>
+          <span class="absolute top-6 right-6 text-slate-600 group-hover:text-teal-400 transition-colors"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></span>
+        </a>
+        <a href="03-policy-eval-studio.html" class="group relative bg-slate-900/70 border border-white/10 hover:border-violet-500/60 rounded-2xl p-6 transition-colors duration-200">
+          <div class="w-11 h-11 rounded-xl bg-violet-500/15 text-violet-400 flex items-center justify-center"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+          <div class="text-xs text-slate-500 mt-5">Màn hình cán bộ chính sách</div>
+          <div class="text-lg font-semibold text-white">AI &amp; Policy Studio</div>
+          <p class="text-sm text-slate-400 mt-1">Sửa một dòng chính sách, Codex sinh lại luật và test, chạy lại 100 hồ sơ mẫu để thấy quyết định nào thay đổi.</p>
+          <span class="absolute top-6 right-6 text-slate-600 group-hover:text-violet-400 transition-colors"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Glossary + compliance -->
+    <section id="tu-dien" class="grid lg:grid-cols-12 gap-4 py-14">
+      <div class="lg:col-span-7 bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2"><i data-lucide="book-open" class="w-5 h-5 text-brand-400"></i>Từ điển 30 giây cho người ngoài ngành tài chính</h2>
+        <dl class="mt-5 grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm" id="glossary"></dl>
+      </div>
+      <div class="lg:col-span-5 bg-slate-900/70 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2"><i data-lucide="scale" class="w-5 h-5 text-teal-400"></i>Đúng luật từ thiết kế</h2>
+        <ul class="mt-5 space-y-4 text-sm">
+          <li class="flex gap-3"><i data-lucide="user-check" class="w-5 h-5 text-teal-400 shrink-0"></i><div><div class="text-white font-medium">Người duyệt, không phải AI</div><div class="text-slate-400 text-xs mt-0.5">Ghi định danh người phê duyệt, Điều 32đ và 32g Thông tư 06/2023/TT-NHNN</div></div></li>
+          <li class="flex gap-3"><i data-lucide="file-lock-2" class="w-5 h-5 text-teal-400 shrink-0"></i><div><div class="text-white font-medium">Hợp đồng do hệ thống ngân hàng điền</div><div class="text-slate-400 text-xs mt-0.5">AI không viết câu chữ hợp đồng, khế ước, ủy nhiệm chi</div></div></li>
+          <li class="flex gap-3"><i data-lucide="eye-off" class="w-5 h-5 text-teal-400 shrink-0"></i><div><div class="text-white font-medium">Che thông tin cá nhân tại chỗ</div><div class="text-slate-400 text-xs mt-0.5">Số điện thoại, CCCD, số tài khoản bị che trước mọi lần gọi AI, theo Nghị định 13/2023</div></div></li>
+          <li class="flex gap-3"><i data-lucide="ban" class="w-5 h-5 text-teal-400 shrink-0"></i><div><div class="text-white font-medium">Không tra CIC khi không cần vay</div><div class="text-slate-400 text-xs mt-0.5">Hồ sơ không thiếu tiền dừng sớm, không phát sinh phí và không để lại dấu tra cứu</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Presenter script -->
+    <section class="pb-14">
+      <details class="group bg-slate-900/50 border border-white/10 rounded-2xl">
+        <summary class="flex items-center justify-between gap-3 px-6 py-4 cursor-pointer list-none text-sm text-white">
+          <span class="flex items-center gap-2"><i data-lucide="presentation" class="w-4 h-4 text-brand-400"></i>Kịch bản demo 3 phút cho người thuyết trình</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+        <ol class="px-6 pb-6 space-y-4" id="script"></ol>
+      </details>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="pb-20">
+      <div class="relative overflow-hidden rounded-3xl border border-brand-500/30 bg-gradient-to-br from-brand-600/25 via-slate-900 to-slate-900 p-8 sm:p-12">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl font-semibold text-white tracking-tight">Đừng cho vay nhiều hơn mức người ta cần.</h2>
+          <p class="text-slate-300 mt-3">Đúng số tiền, đúng số tuần, trả theo nhịp bán hàng, và người của ngân hàng luôn là người ký. Xem cả quy trình chạy thật trong 3 phút.</p>
+          <div class="flex flex-wrap gap-3 mt-7">
+            <a href="01-seller-portal.html" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl px-5 py-3 text-sm font-medium transition-colors shadow-lg shadow-brand-900/40"><i data-lucide="play" class="w-4 h-4"></i>Bắt đầu demo</a>
+            <a href="#thu" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl px-5 py-3 text-sm font-medium transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Quay lại mô phỏng</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    EZX.mountHeader('home', { dark: true });
+    const $ = id => document.getElementById(id);
+
+    /* ---------- Cash flow engine (same rules as the seller portal, BL-01..BL-04) ---------- */
+    const STRESS = 0.7, RATE_WEEK = 0.0083, DEDUCT_CAP = 0.25;
+
+    function simulate(p, payout) {
+      const out = [];
+      let bal = p.cash;
+      for (let t = 0; t <= p.weeks; t++) {
+        let pay = 0;
+        if (t === 0) pay += p.lot * p.dep;
+        if (p.dep < 1 && t === Math.min(p.rem, p.weeks)) pay += p.lot * (1 - p.dep);
+        bal += (t >= 1 ? payout : 0) - pay;
+        out.push(Math.round(bal * 10) / 10);
+      }
+      return out;
+    }
+
+    function thresholdPayout(p) {
+      for (let x = 0; x <= 300; x++) if (Math.min(...simulate(p, x)) >= 0) return x;
+      return 300;
+    }
+
+    function engine(p) {
+      const base = simulate(p, p.payout);
+      const gap = Math.max(0, -Math.min(...base));
+      if (!gap) return { gap: 0, base, threshold: thresholdPayout(p) };
+      const deepest = base.indexOf(Math.min(...base));
+      const negWeeks = base.filter(v => v < 0).length;
+      let amount = Math.ceil((gap * 1.1) / 5) * 5;
+      if (amount > gap * 1.15) amount = Math.floor(gap * 1.15);
+      const ceiling = DEDUCT_CAP * p.payout * STRESS;
+      let term = negWeeks + 2, total, weekly;
+      while (true) {
+        total = Math.round(amount * (1 + RATE_WEEK * term));
+        weekly = Math.ceil(total / term);
+        if (weekly <= ceiling || term >= 26) break;
+        term += 2;
+      }
+      const withLoan = base.map((v, i) => Math.round((v + amount - weekly * Math.min(i, term)) * 10) / 10);
+      return { gap, base, withLoan, deepest, negWeeks, amount, term, total, weekly, ratio: weekly / (p.payout * STRESS) };
+    }
+
+    /* ---------- Chart ---------- */
+    function drawChart(svg, base, withLoan, { W, H, delay = 0, labels = true } = {}) {
+      const pad = 22, bottom = 20;
+      const all = [...base, ...(withLoan || []), 0];
+      let max = Math.max(...all), min = Math.min(...all);
+      const span = Math.max(1, max - min);
+      max += span * 0.12; min -= span * 0.12;
+      const y = v => pad + (max - v) / (max - min) * (H - pad - bottom);
+      const cw = (W - pad * 2) / base.length;
+      const x = i => pad + cw * i + cw / 2;
+      const bw = Math.min(36, cw * 0.6);
+      let g = `<rect x="${pad}" y="${y(0)}" width="${W - pad * 2}" height="${Math.max(0, y(min) - y(0))}" fill="rgba(244,63,94,.06)"/>`;
+      g += `<line x1="${pad}" x2="${W - pad}" y1="${y(0)}" y2="${y(0)}" stroke="#475569"/>`;
+      g += `<text x="${pad}" y="${y(0) - 4}" font-size="10" fill="#64748b">0đ</text>`;
+      base.forEach((d, i) => {
+        const neg = d < 0;
+        g += `<rect class="${neg ? 'bar-grow-down' : 'bar-grow'}" style="animation-delay:${delay + i * 50}ms" x="${x(i) - bw / 2}" y="${neg ? y(0) : y(d)}" width="${bw}" height="${Math.max(1, Math.abs(y(d) - y(0)))}" rx="5" fill="${neg ? '#f43f5e' : '#14b8a6'}" opacity="${neg ? 1 : .55}"><title>Tuần ${i}: ${EZX.tr(d)}</title></rect>`;
+        g += `<text x="${x(i)}" y="${H - 4}" text-anchor="middle" font-size="10" fill="#64748b">T${i}</text>`;
+        if (labels && neg) g += `<text x="${x(i)}" y="${y(d) + 14}" text-anchor="middle" font-size="10" font-weight="600" fill="#fecdd3">${EZX.tr(d)}</text>`;
+      });
+      if (withLoan) {
+        const path = withLoan.map((d, i) => `${i ? 'L' : 'M'}${x(i)},${y(d)}`).join(' ');
+        g += `<path class="line-draw" style="--len:1200;animation-delay:${delay + 400}ms" d="${path}" fill="none" stroke="#fb923c" stroke-width="2.5" stroke-linejoin="round"/>`;
+        withLoan.forEach((d, i) => { g += `<circle cx="${x(i)}" cy="${y(d)}" r="3" fill="#fb923c"><title>Tuần ${i} nếu vay: ${EZX.tr(d)}</title></circle>`; });
+      }
+      svg.innerHTML = g;
+      return { x, y };
+    }
+
+    /* ---------- Hero ---------- */
+    (function hero() {
+      const p = { lot: 200, cash: 120, dep: 1, rem: 4, weeks: 6, payout: 70 };
+      const r = engine(p);
+      const svg = $('h-chart');
+      const { x, y } = drawChart(svg, r.base, r.withLoan, { W: 520, H: 200, delay: 300, labels: false });
+      svg.insertAdjacentHTML('beforeend', `
+        <g class="fade-up" style="animation-delay:1.3s">
+          <rect x="${x(0) + 24}" y="${y(r.base[0]) - 6}" width="150" height="24" rx="6" fill="#e11d48"/>
+          <text x="${x(0) + 99}" y="${y(r.base[0]) + 10}" text-anchor="middle" font-size="11" font-weight="600" fill="#fff">Trả xưởng xong: âm 80tr</text>
+        </g>
+        <g class="fade-up" style="animation-delay:1.7s">
+          <text x="${x(5)}" y="${y(r.base[6]) - 4}" text-anchor="middle" font-size="11" fill="#99f6e4">Tiền bán về +70tr/tuần</text>
+        </g>`);
+      setTimeout(() => EZX.countUp($('h-gap'), r.gap, { suffix: 'tr' }), 500);
+      setTimeout(() => EZX.countUp($('h-offer'), r.amount, { suffix: 'tr' }), 900);
+    })();
+
+    /* ---------- Simulator ---------- */
+    const PRESETS = {
+      B: { lot: 200, cash: 120, dep: 100, rem: 4, weeks: 6, pay: 70 },
+      A: { lot: 200, cash: 120, dep: 50, rem: 4, weeks: 6, pay: 70 }
+    };
+    const ids = ['lot', 'cash', 'dep', 'rem', 'weeks', 'pay'];
+
+    function readPlan() {
+      const v = k => +$('s-' + k).value;
+      const weeks = v('weeks');
+      $('s-rem').max = weeks;
+      if (+$('s-rem').value > weeks) $('s-rem').value = weeks;
+      return { lot: v('lot'), cash: v('cash'), dep: v('dep') / 100, rem: +$('s-rem').value, weeks, payout: v('pay') };
+    }
+
+    function renderSim() {
+      const p = readPlan();
+      $('s-lot-v').textContent = EZX.tr(p.lot);
+      $('s-cash-v').textContent = EZX.tr(p.cash);
+      $('s-dep-v').textContent = Math.round(p.dep * 100) + '%';
+      $('s-rem-v').textContent = 'Tuần ' + p.rem;
+      $('s-weeks-v').textContent = p.weeks + ' tuần';
+      $('s-pay-v').textContent = EZX.tr(p.payout);
+      $('s-rem-row').classList.toggle('hidden', p.dep >= 1);
+
+      const r = engine(p);
+      drawChart($('s-chart'), r.base, r.gap ? r.withLoan : null, { W: 640, H: 230 });
+      $('s-legend-loan').classList.toggle('hidden', !r.gap);
+
+      const box = $('s-verdict');
+      if (!r.gap) {
+        box.innerHTML = `
+          <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+            <div class="flex items-center gap-2 text-emerald-300 font-semibold"><i data-lucide="circle-check" class="w-5 h-5"></i>Không cần vay. Lô hàng này tự xoay được.</div>
+            <p class="text-sm text-slate-300 mt-2">Không tuần nào bị âm tiền. Hệ thống dừng ở đây: <b class="text-white">không tra lịch sử tín dụng, không tốn phí</b> cho ngân hàng, không để lại dấu trong hồ sơ người bán.</p>
+            <div class="text-xs text-slate-400 mt-3 flex items-center gap-1.5"><i data-lucide="bell-ring" class="w-3.5 h-3.5 text-amber-400"></i>Chỉ cảnh báo nếu tiền bán về dưới <b class="text-white">${EZX.tr(r.threshold)}/tuần</b>.</div>
+          </div>`;
+      } else {
+        const firstNeg = r.base.findIndex(v => v < 0);
+        box.innerHTML = `
+          <div class="grid sm:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4">
+              <div class="text-[11px] text-rose-300">Thiếu nhiều nhất</div>
+              <div class="text-2xl font-semibold text-rose-200 tnum mt-1">${EZX.tr(r.gap)}</div>
+              <div class="text-[11px] text-slate-400 mt-1">Âm tiền ${r.negWeeks} tuần, từ tuần ${firstNeg}</div>
+            </div>
+            <div class="rounded-2xl bg-brand-500/10 border border-brand-500/30 p-4">
+              <div class="text-[11px] text-brand-300">Đề xuất vay</div>
+              <div class="text-2xl font-semibold text-white tnum mt-1">${EZX.tr(r.amount)}</div>
+              <div class="text-[11px] text-slate-400 mt-1">Phần thiếu cộng 10% dự phòng</div>
+            </div>
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-4">
+              <div class="text-[11px] text-slate-400">Trả xong trong</div>
+              <div class="text-2xl font-semibold text-white tnum mt-1">${r.term} tuần</div>
+              <div class="text-[11px] text-slate-400 mt-1">Tự trừ ${EZX.tr(r.weekly)}/tuần từ tiền bán</div>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3 mt-3 text-xs">
+            <div class="flex items-start gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-slate-300"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>Mỗi tuần trừ ${EZX.pct(r.ratio)} tiền bán về ở kịch bản xấu, dưới trần 25%. Tổng phải trả ${EZX.tr(r.total)}.</span></div>
+            <div class="flex items-start gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-slate-400"><i data-lucide="scale" class="w-4 h-4 text-slate-500 shrink-0"></i><span>Gói vay hiện có: hạn mức theo doanh thu quá khứ, trả góp tối thiểu 3 tháng (khoảng 13 tuần).</span></div>
+          </div>`;
+      }
+      EZX.icons();
+    }
+
+    ids.forEach(k => $('s-' + k).addEventListener('input', renderSim));
+    document.querySelectorAll('.preset').forEach(btn => btn.addEventListener('click', () => {
+      const pr = PRESETS[btn.dataset.preset];
+      ids.forEach(k => { $('s-' + k).value = pr[k]; });
+      renderSim();
+    }));
+    renderSim();
+
+    /* ---------- Comparison ---------- */
+    const CMP = [
+      ['Căn cứ cho vay', 'Doanh thu quá khứ của cả cửa hàng', 'Dòng tiền từng tuần của đúng lô hàng cần vốn'],
+      ['Số tiền', 'Hạn mức chung, thường nhiều hơn mức cần', 'Đúng phần thiếu, cộng 10% dự phòng'],
+      ['Kỳ hạn', '3 đến 24 tháng', 'Số tuần thiếu tiền, cộng 2 tuần đệm'],
+      ['Cách trả', 'Góp cố định hằng tháng, kể cả tháng bán ế', 'Tự trừ tối đa 25% tiền bán về mỗi tuần. Bán chậm thì được đề xuất giãn hạn'],
+      ['Giấy tờ', 'Ảnh chụp doanh thu, sao kê ngân hàng', 'Dữ liệu sàn người bán đã đồng ý chia sẻ. Sao kê chỉ khi xin vượt mức'],
+      ['Khi không cần vay', 'Vẫn được mời vay', 'Hệ thống nói thẳng "không cần vay" và không tra cứu tín dụng'],
+      ['Ai quyết định', 'Thẩm định thủ công, mất nhiều ngày', 'AI phân tích có bằng chứng, người ngân hàng ký trong vài phút']
+    ];
+    $('cmp').innerHTML = CMP.map(([k, old, ezx]) => `
+      <div class="grid grid-cols-12 text-sm">
+        <div class="col-span-12 sm:col-span-3 px-5 pt-4 sm:py-4 text-white font-medium">${k}</div>
+        <div class="col-span-6 sm:col-span-4 px-5 py-3 sm:py-4 text-slate-400 flex gap-2"><i data-lucide="minus" class="w-4 h-4 text-slate-600 shrink-0 mt-0.5"></i><span>${old}</span></div>
+        <div class="col-span-6 sm:col-span-5 px-5 py-3 sm:py-4 text-slate-200 bg-brand-500/5 flex gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i><span>${ezx}</span></div>
+      </div>`).join('');
+
+    /* ---------- Technical pipeline ---------- */
+    const PIPE = [
+      ['shield', 'Guardrail', 'Che thông tin cá nhân, chặn lệnh lừa AI', 'violet'],
+      ['database', 'Dữ liệu sàn', 'Tiền bán 12 tuần, có đồng ý', 'sky'],
+      ['chart-column', 'Dòng tiền', 'Khoản thiếu theo tuần, 2 kịch bản', 'sky'],
+      ['search-check', 'CIC', 'Chỉ tra khi có thiếu', 'teal'],
+      ['gauge', 'PD + SHAP', 'Xác suất không trả nợ, có giải thích', 'sky'],
+      ['scale', 'Policy', 'rules.py do Codex sinh', 'sky'],
+      ['file-text', 'Tờ trình', 'Mỗi câu gắn bằng chứng', 'amber'],
+      ['fingerprint', 'Người ký', 'Thẩm định viên ngân hàng', 'teal']
+    ];
+    const C = { violet: 'text-violet-300 bg-violet-500/10 border-violet-500/30', sky: 'text-sky-300 bg-sky-500/10 border-sky-500/30', amber: 'text-amber-300 bg-amber-500/10 border-amber-500/30', teal: 'text-teal-300 bg-teal-500/10 border-teal-500/30' };
+    $('pipe').innerHTML = PIPE.map(([icon, t, d, c], i) => `
+      <li class="relative rounded-xl border p-3 ${C[c]}">
+        <div class="flex items-center gap-1.5"><span class="mono text-[10px] opacity-60">${String(i + 1).padStart(2, '0')}</span><i data-lucide="${icon}" class="w-4 h-4"></i></div>
+        <div class="text-sm font-medium text-white mt-2">${t}</div>
+        <div class="text-[11px] text-slate-400 mt-0.5 leading-snug">${d}</div>
+      </li>`).join('');
+
+    /* ---------- Glossary ---------- */
+    const GLOSSARY = [
+      ['Payout', 'Tiền sàn chuyển cho người bán sau khi đơn đã giao thành công. Đây cũng là nguồn trả nợ tự động.'],
+      ['Khoản thiếu (Gap)', 'Số tiền âm sâu nhất trong túi người bán ở tuần tệ nhất. Vay đúng số này là đủ.'],
+      ['Kịch bản xấu', 'Giả sử tiền bán về chỉ còn 70% mức thường, để chắc người bán vẫn trả được.'],
+      ['CIC', 'Trung tâm Thông tin Tín dụng Quốc gia, nơi lưu lịch sử vay nợ. Mỗi lần tra tốn phí.'],
+      ['PD', 'Xác suất người vay không trả được nợ, do mô hình học máy chấm, có giải thích lý do.'],
+      ['Tờ trình', 'Báo cáo thẩm định mà cán bộ ngân hàng đọc trước khi ký duyệt khoản vay.'],
+      ['LOS', 'Hệ thống xử lý khoản vay của ngân hàng: điền hợp đồng, thu chữ ký, giải ngân.'],
+      ['Policy-as-Code', 'Chính sách cho vay viết thành code chạy được và kiểm thử được, thay vì nằm trong file Word.']
+    ];
+    $('glossary').innerHTML = GLOSSARY.map(([t, d]) => `
+      <div><dt class="text-white font-medium">${t}</dt><dd class="text-slate-400 text-xs mt-0.5 leading-relaxed">${d}</dd></div>`).join('');
+
+    /* ---------- Presenter script ---------- */
+    const SCRIPT = [
+      ['0:00', 'Người bán · Cần vay', 'Bấm "Cần vay". Chỉ ra số điện thoại bị che trước khi gửi AI, rồi xin 150tr nhưng chỉ thiếu 80tr.', '01-seller-portal.html'],
+      ['0:40', 'Người bán · Thanh trượt', 'Kéo "Trả trước cho xưởng" xuống 50%: khoản thiếu biến mất, không cần vay, không tra CIC.', '01-seller-portal.html'],
+      ['1:10', 'Ngân hàng · Ký số', 'Gửi hồ sơ. Ở tab ngân hàng, bấm mã E1, E6 để xem số gốc, giữ nút để ký. Xem hồ sơ chuyển sang hệ thống ngân hàng.', '02-lender-cockpit.html'],
+      ['1:50', 'Người bán · OTP', 'Quay lại tab người bán, ký OTP. Tiền giải ngân thẳng cho xưởng, hiện tổng thời gian.', '01-seller-portal.html'],
+      ['2:20', 'Studio · Codex', 'Bấm "Thử: R03 → 10%". Codex sửa rules.py, sinh test, chạy lại cho thấy 3 hồ sơ đổi quyết định.', '03-policy-eval-studio.html']
+    ];
+    $('script').innerHTML = SCRIPT.map(([t, title, d, href]) => `
+      <li class="flex gap-4">
+        <span class="mono text-xs text-brand-400 w-10 shrink-0 pt-0.5">${t}</span>
+        <div class="flex-1 border-l border-white/10 pl-4 pb-1">
+          <a href="${href}" class="text-sm font-medium text-white hover:text-brand-300 transition-colors">${title}</a>
+          <div class="text-xs text-slate-400 mt-0.5">${d}</div>
+        </div>
+      </li>`).join('');
+
+    /* ---------- Count-up stats ---------- */
+    const io = new IntersectionObserver(entries => entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      EZX.countUp(el, +el.dataset.count, { dec: +(el.dataset.dec || 0), suffix: el.dataset.suffix || '', prefix: el.dataset.prefix || '', dur: 1100 });
+      io.unobserve(el);
+    }), { threshold: .4 });
+    document.querySelectorAll('[data-count]').forEach(el => io.observe(el));
+
+    $('dual').onclick = () => {
+      const w = Math.floor(screen.availWidth / 2), h = screen.availHeight;
+      const a = window.open('01-seller-portal.html', 'ezx-seller', `width=${w},height=${h},left=0,top=0`);
+      const b = window.open('02-lender-cockpit.html', 'ezx-lender', `width=${w},height=${h},left=${w},top=0`);
+      if (!a || !b) EZX.toast('Trình duyệt chặn cửa sổ bật lên. Hãy cho phép popup rồi thử lại.', 'warn');
+    };
+
+    EZX.icons();
+  </script>
+</body>
+</html>

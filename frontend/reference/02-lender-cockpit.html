@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezXRiverbank · Underwriting Cockpit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="assets/shared.js"></script>
+  <link rel="stylesheet" href="assets/shared.css" />
+  <style>
+    .hold-ring { stroke-dasharray: 113; stroke-dashoffset: 113; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+  <div id="app-header"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+    <!-- KPI strip -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center"><i data-lucide="landmark" class="w-5 h-5"></i></div>
+        <div>
+          <div class="text-[11px] font-semibold text-teal-700 uppercase tracking-wider">Vietcombank · Underwriting Cockpit</div>
+          <div class="text-sm text-slate-600">Nguyễn Thu Hà · Thẩm định viên cấp 2 · Hạn mức phê duyệt 500tr</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div class="bg-white border border-slate-200 rounded-xl px-3 py-2"><div class="text-slate-500">Trong hàng đợi</div><div id="k-queue" class="text-base font-semibold text-slate-900 tnum">4</div></div>
+        <div class="bg-white border border-slate-200 rounded-xl px-3 py-2"><div class="text-slate-500">Thời gian ra quyết định</div><div class="text-base font-semibold text-slate-900 tnum">3m 12s</div></div>
+        <div class="bg-white border border-slate-200 rounded-xl px-3 py-2"><div class="text-slate-500">Hôm nay đã quyết</div><div id="k-done" class="text-base font-semibold text-slate-900 tnum">27</div></div>
+        <div class="bg-white border border-emerald-200 rounded-xl px-3 py-2"><div class="text-emerald-700">AI tự quyết</div><div class="text-base font-semibold text-emerald-700 tnum">0 hồ sơ</div></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Queue -->
+      <aside class="lg:col-span-3 space-y-2">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Hàng đợi</span>
+          <span class="text-[11px] text-slate-400">Sắp theo ưu tiên</span>
+        </div>
+        <div id="queue" class="space-y-2"></div>
+      </aside>
+
+      <!-- Case -->
+      <section class="lg:col-span-6 bg-white border border-slate-200 rounded-2xl shadow-card">
+        <div class="p-6 space-y-5" id="case"></div>
+      </section>
+
+      <!-- Evidence + audit -->
+      <aside class="lg:col-span-3 space-y-4">
+        <div id="ev-card" class="bg-white border border-slate-200 rounded-2xl shadow-card p-5 transition-shadow">
+          <div class="flex items-center justify-between mb-1">
+            <span id="ev-title" class="text-sm font-semibold text-slate-900">Bằng chứng</span>
+            <span class="text-[10px] text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5 flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i>Bất biến</span>
+          </div>
+          <div id="ev-hash" class="text-[10px] mono text-slate-400 mb-3"></div>
+          <div id="ev-body" class="text-sm text-slate-500"></div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold text-slate-900">Nhật ký kiểm toán</span>
+            <span class="text-[10px] text-slate-400">append-only</span>
+          </div>
+          <ol id="timeline" class="space-y-3 text-xs max-h-80 overflow-y-auto scroll-thin pr-1"></ol>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Sign modal -->
+  <div id="sign-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="sign-title">
+    <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 fade-up">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs text-teal-700 font-medium">Quyết định tín dụng · ký số</div>
+          <h2 id="sign-title" class="text-lg font-semibold text-slate-900 mt-1">Xác nhận phê duyệt</h2>
+        </div>
+        <button id="sign-close" class="text-slate-400 hover:text-slate-700 cursor-pointer" aria-label="Đóng"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="sign-summary" class="mt-4 bg-slate-50 rounded-xl p-4 text-sm space-y-1.5"></div>
+      <div class="mt-3 text-xs text-slate-500 flex items-start gap-1.5"><i data-lucide="scale" class="w-3.5 h-3.5 mt-px shrink-0"></i>Ghi nhận định danh người phê duyệt theo Điều 32g, Thông tư 06/2023/TT-NHNN. Hệ thống AI chỉ đề xuất.</div>
+      <button id="hold" class="relative mt-5 w-full select-none bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 text-sm font-medium cursor-pointer overflow-hidden transition-colors">
+        <span id="hold-fill" class="absolute inset-y-0 left-0 bg-teal-800/60" style="width:0%"></span>
+        <span class="relative flex items-center justify-center gap-2"><i data-lucide="fingerprint" class="w-4 h-4"></i><span id="hold-label">Giữ để ký số</span></span>
+      </button>
+      <div class="text-[11px] text-slate-400 text-center mt-2">Giữ chuột hoặc phím Space khoảng 1 giây</div>
+    </div>
+  </div>
+
+  <script>
+    EZX.mountHeader('lender');
+    const $ = id => document.getElementById(id);
+
+    const RULES = [
+      ['R01', 'Trần theo gap ×1,15'], ['R02', 'Tuổi shop ≥ 6 tháng'], ['R03', 'Hoàn hàng ≤ 8%'],
+      ['R04', 'Trừ ≤ 25% payout xấu'], ['R05', 'Sao kê khi vượt mức'], ['R06', 'CIC nhóm 1'],
+      ['R07', 'Consent hiệu lực'], ['R08', 'Ngành hàng được phép'], ['R09', 'Một lô một hồ sơ']
+    ];
+
+    function caseB() {
+      const s = EZX.get().seller || {};
+      const amount = s.amount ?? 90, term = s.term ?? 8, weekly = s.weekly ?? 12, total = s.total ?? 96, gap = s.gap ?? 80, req = s.req ?? 150;
+      const ratio = s.ratio ?? weekly / 49;
+      return {
+        key: 'B', id: 'HS-B02', title: 'Gia Dụng Minh Anh', meta: 'Shop 26 tháng · Gia dụng · CIF 0081-224',
+        short: `Xin ${EZX.tr(req)} → đề xuất ${EZX.tr(amount)}`,
+        badge: ['Fast-track', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+        priority: 1, live: s.status === 'submitted', submittedAt: s.submittedAt,
+        stats: [['Thiếu thật', EZX.tr(gap)], ['Đề xuất', `${EZX.tr(amount)} · ${term} tuần`], ['PD', '3,1%'], ['Trừ / payout xấu', EZX.pct(ratio)]],
+        compare: { req, amount, gap },
+        memo: [
+          [`Thiếu sâu nhất ${EZX.tr(gap)} ở tuần 0, hết âm từ tuần 2.`, 'E5'],
+          [`Đề xuất ${EZX.tr(amount)} (gap +10% đệm), thấp hơn số xin ${EZX.tr(req)}.`, 'E5'],
+          [`Trừ ${EZX.tr(weekly)}/tuần, bằng ${EZX.pct(ratio)} payout kịch bản xấu (trần 25%).`, 'E1'],
+          ['CIC nhóm 1. PD 3,1%, yếu tố chính là tuổi shop 26 tháng.', 'E6'],
+          ['Đạt 9/9 rule, không cần sao kê.', 'E7']
+        ],
+        rules: RULES.map(([c]) => [c, 'pass']),
+        versions: [{ v: 1, by: 'Hệ thống đề xuất', terms: `${EZX.tr(amount)} · ${term} tuần · ${EZX.tr(weekly)}/tuần`, active: true }],
+        mode: 'loan', amount, term, weekly, total,
+        events: [
+          ['Seller', 'Gửi kế hoạch qua Copilot'], ['Guardrail', 'Che 1 SĐT, không phát hiện injection'],
+          ['Cash Flow', `Tính dòng tiền: thiếu ${EZX.tr(gap)}`], ['Cổng NH', 'Tra CIC: nhóm 1'],
+          ['Policy', '9/9 rule pass → Fast-track']
+        ]
+      };
+    }
+
+    const CASES = {
+      C: {
+        key: 'C', id: 'HS-C09', title: 'Thời Trang K&K', meta: 'Shop 14 tháng · Thời trang · CIF 0081-913',
+        short: 'Sao kê lệch 71% so với sàn', priority: 2,
+        badge: ['Cần xác minh', 'bg-rose-50 text-rose-700 border-rose-200'],
+        stats: [['Thiếu thật', '80tr'], ['Xin', '300tr'], ['Lệch sao kê', '71%'], ['Ngưỡng', '15%']],
+        compare: { req: 300, amount: 90, gap: 80 },
+        memo: [
+          ['Xin 300tr, bằng 2,5 lần mức dữ liệu sàn hỗ trợ (120tr).', 'E7'],
+          ['Sao kê ghi 480tr/tháng là tiền từ sàn, dữ liệu sàn ghi 280tr/tháng.', 'D08'],
+          ['Số liệu không khớp, cần xác minh với seller.', 'D08']
+        ],
+        rules: RULES.map(([c]) => [c, c === 'R05' ? 'review' : 'pass']),
+        versions: [{ v: 1, by: 'Hệ thống', terms: 'Chưa đề xuất, chờ xác minh', active: true }],
+        mode: 'escalated',
+        events: [['Seller', 'Gửi hồ sơ, xin 300tr'], ['Policy', 'R05: yêu cầu sao kê'], ['Vision + Jev', 'Đối chiếu sao kê: lệch 71%'], ['Hệ thống', 'Chuyển người xác minh']]
+      },
+      L: {
+        key: 'L', id: 'KV-99201 · tuần 3', title: 'Mỹ Phẩm Hà Vy', meta: 'Khoản vay đang trả · 90tr / 8 tuần',
+        short: 'Payout giảm 40%, trích thiếu', priority: 3,
+        badge: ['Đề xuất giãn hạn', 'bg-amber-50 text-amber-700 border-amber-200'],
+        stats: [['Payout T3', '42tr'], ['Trích được', '10,5 / 12tr'], ['PD', '3,1 → 9,8%'], ['Đề xuất', '12 tuần']],
+        memo: [
+          ['Payout tuần 3 giảm 40%, tỷ lệ hoàn hàng 5% lên 14%.', 'M1'],
+          ['Trừ 12tr vượt 25% payout mới (10,5tr).', 'E7'],
+          ['PD chấm lại 9,8%. Đề xuất giãn 8 → 12 tuần, trừ 8tr/tuần.', 'E6'],
+        ],
+        rules: RULES.map(([c]) => [c, c === 'R04' ? 'fail' : 'pass']),
+        versions: [{ v: 1, by: 'Giải ngân', terms: '90tr · 8 tuần · 12tr/tuần', active: true }],
+        mode: 'restructure',
+        events: [['LOS', 'Đã giải ngân 90tr'], ['Payout Engine', 'Tuần 3: Short_Paid 10,5/12tr'], ['Monitor Agent', 'Chấm lại PD: 9,8%'], ['Monitor Agent', 'Đề xuất giãn hạn, chờ người duyệt']]
+      },
+      A: {
+        key: 'A', id: 'HS-A01', title: 'Phụ Kiện 24h', meta: 'Shop 31 tháng · Phụ kiện',
+        short: 'Không cần vay, đã đóng', priority: 4,
+        badge: ['Không cần vay', 'bg-slate-100 text-slate-600 border-slate-200'],
+        stats: [['Thiếu thật', '0'], ['Thấp nhất', '+20tr'], ['CIC', 'Không tra'], ['Cảnh báo', '< 20tr/tuần']],
+        memo: [['Xưởng cho cọc 50%, trả nốt tuần 4. Không tuần nào âm tiền.', 'E5']],
+        rules: [], versions: [], mode: 'readonly',
+        events: [['Seller', 'Gửi kế hoạch'], ['Cash Flow', 'Không có tuần âm'], ['Hệ thống', 'Dừng sớm, không tra CIC'], ['Hệ thống', 'Đóng hồ sơ']]
+      }
+    };
+
+    const EVIDENCE = {
+      E1: { title: 'E1 · Payout 12 tuần', kind: 'payout' },
+      E5: { title: 'E5 · Dòng tiền tuần', kind: 'cash' },
+      E6: { title: 'E6 · Rủi ro (PD + SHAP)', kind: 'shap' },
+      E7: { title: 'E7 · Kết quả rule', kind: 'rules' },
+      D08: { title: 'D08 · Đối chiếu sao kê', kind: 'stmt' },
+      M1: { title: 'M1 · Sự kiện sau giải ngân', kind: 'monitor' }
+    };
+
+    let current = 'B';
+    const decided = {};
+    const bootAt = Date.now();
+
+    function getCase(k) {
+      if (k !== 'B') return CASES[k];
+      const o = caseB(), d = decided.B || {};
+      ['versions', 'amount', 'term', 'weekly', 'total', 'stats'].forEach(f => { if (d[f] !== undefined) o[f] = d[f]; });
+      return o;
+    }
+
+    /* ---------- Queue ---------- */
+
+    function sla(t) {
+      if (!t) return '';
+      const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+      return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function renderQueue() {
+      const keys = ['B', 'C', 'L', 'A'];
+      $('queue').innerHTML = keys.map(k => {
+        const c = getCase(k);
+        const active = k === current;
+        const done = decided[k]?.final || (k === 'B' && ['approved', 'disbursed'].includes(EZX.get().seller?.status));
+        return `
+        <button data-k="${k}" class="q-item w-full text-left rounded-xl border p-3.5 cursor-pointer transition-all duration-200 ${active ? 'bg-white border-teal-500 shadow-card ring-4 ring-teal-500/10' : 'bg-white/70 border-slate-200 hover:bg-white hover:border-slate-300'}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-medium text-slate-900 truncate">${c.title}</span>
+            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${done ? 'bg-slate-100 text-slate-500 border-slate-200' : c.badge[1]}">${done ? 'Đã quyết' : c.badge[0]}</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1">${c.short}</div>
+          <div class="flex items-center justify-between mt-2 text-[10px] text-slate-400">
+            <span class="mono">${c.id}</span>
+            ${c.live ? `<span class="flex items-center gap-1 text-teal-700 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-teal-500 ping-soft"></span>Mới · <span class="sla tnum" data-t="${c.submittedAt}">${sla(c.submittedAt)}</span></span>` : ''}
+          </div>
+        </button>`;
+      }).join('');
+      document.querySelectorAll('.q-item').forEach(b => b.onclick = () => { current = b.dataset.k; render(); });
+      $('k-queue').textContent = keys.filter(k => !decided[k]?.final && k !== 'A').length;
+    }
+    setInterval(() => document.querySelectorAll('.sla').forEach(el => el.textContent = sla(+el.dataset.t)), 1000);
+
+    /* ---------- Evidence ---------- */
+
+    function bars(values, { h = 64, color = '#14b8a6', neg = '#f43f5e', labels } = {}) {
+      const max = Math.max(...values.map(Math.abs));
+      return `<div class="flex items-end gap-1" style="height:${h}px">${values.map((v, i) => `
+        <div class="flex-1 flex flex-col items-center justify-end h-full" title="${labels ? labels[i] + ': ' : ''}${v}">
+          <div class="w-full rounded-sm bar-grow" style="animation-delay:${i * 30}ms;height:${Math.max(3, Math.abs(v) / max * (h - 14))}px;background:${v < 0 ? neg : color}"></div>
+          ${labels ? `<div class="text-[9px] text-slate-400 mt-0.5">${labels[i]}</div>` : ''}
+        </div>`).join('')}</div>`;
+    }
+
+    const rowTable = rows => `<table class="w-full text-sm mt-3">${rows.map(([a, b, tone]) => `<tr class="border-b border-slate-100 last:border-0"><td class="py-1.5 text-slate-500">${a}</td><td class="py-1.5 text-right font-medium tnum ${tone || 'text-slate-900'}">${b}</td></tr>`).join('')}</table>`;
+
+    function showEvidence(code, flash = true) {
+      const ev = EVIDENCE[code];
+      if (!ev) return;
+      const c = getCase(current);
+      $('ev-title').textContent = ev.title;
+      $('ev-hash').textContent = `${EZX.hash(c.id + code)} · ghi ${EZX.clock(Date.now() - 180000)}`;
+      let html = '';
+      if (ev.kind === 'payout') {
+        const p = [66, 72, 69, 75, 68, 71, 70, 74, 67, 73, 69, 70];
+        html = `<div class="text-xs text-slate-500 mb-2">Payout thực nhận 12 tuần gần nhất (triệu)</div>${bars(p, { h: 70 })}` +
+          rowTable([['Trung vị', '70tr/tuần'], ['Kịch bản xấu (×0,7)', '49tr/tuần'], ['Trần trừ 25%', '12,25tr', 'text-teal-700']]);
+      } else if (ev.kind === 'cash') {
+        const v = current === 'A' ? [20, 90, 160, 230, 200, 270, 340] : [-80, -10, 60, 130, 200, 270, 340];
+        html = `<div class="text-xs text-slate-500 mb-2">Số dư cuối tuần, kịch bản cơ sở (triệu)</div>${bars(v, { h: 80, labels: v.map((_, i) => 'T' + i) })}` +
+          rowTable([['Tuần âm', current === 'A' ? 'Không có' : 'T0, T1', current === 'A' ? 'text-emerald-700' : 'text-rose-600'], ['Sâu nhất', current === 'A' ? '+20tr' : '−80tr'], ['Nguồn', 'Payout sàn + điều khoản xưởng']]);
+      } else if (ev.kind === 'shap') {
+        const items = current === 'L'
+          ? [['Hoàn hàng 14%', 4.1], ['Payout −40%', 2.6], ['Tuổi shop 22 tháng', -0.9], ['CIC nhóm 1', -0.5]]
+          : [['Tuổi shop 26 tháng', -1.4], ['Hoàn hàng 1,8%', -0.9], ['Trả xưởng 100% trước', 0.5], ['Payout ổn định', -0.6]];
+        const base = current === 'L' ? 4.5 : 5.5, pd = current === 'L' ? '9,8%' : '3,1%';
+        const max = Math.max(...items.map(i => Math.abs(i[1])));
+        html = `<div class="flex items-baseline justify-between"><span class="text-xs text-slate-500">PD nền ${base.toLocaleString('vi-VN')}%</span><span class="text-2xl font-semibold text-slate-900 tnum">${pd}</span></div>
+          <div class="space-y-2 mt-3">${items.map(([k, v]) => `
+            <div class="text-xs"><div class="flex justify-between text-slate-600"><span>${k}</span><span class="tnum font-medium ${v > 0 ? 'text-rose-600' : 'text-emerald-700'}">${v > 0 ? '+' : '−'}${Math.abs(v).toLocaleString('vi-VN')}%</span></div>
+            <div class="relative h-2 bg-slate-100 rounded-full mt-1"><div class="absolute top-0 h-2 rounded-full ${v > 0 ? 'bg-rose-400 left-1/2' : 'bg-emerald-500 right-1/2'}" style="width:${Math.abs(v) / max * 50}%"></div><div class="absolute left-1/2 -top-0.5 w-px h-3 bg-slate-300"></div></div></div>`).join('')}</div>
+          <div class="text-[11px] text-slate-400 mt-3">LightGBM · giải thích SHAP · không dùng thuộc tính nhạy cảm</div>`;
+      } else if (ev.kind === 'rules') {
+        html = `<div class="space-y-1">${c.rules.map(([code, st]) => {
+          const name = RULES.find(r => r[0] === code)[1];
+          const t = { pass: ['check', 'text-emerald-700 bg-emerald-50'], fail: ['x', 'text-rose-700 bg-rose-50'], review: ['eye', 'text-amber-700 bg-amber-50'] }[st];
+          return `<div class="flex items-center justify-between text-xs py-1"><span class="text-slate-600"><span class="mono text-slate-400 mr-1.5">${code}</span>${name}</span><span class="w-5 h-5 rounded-full flex items-center justify-center ${t[1]}"><i data-lucide="${t[0]}" class="w-3 h-3"></i></span></div>`;
+        }).join('')}</div><div class="text-[11px] text-slate-400 mt-3 mono">rules.py v1.2 · Codex biên dịch từ policy.md</div>`;
+      } else if (ev.kind === 'stmt') {
+        html = `<div class="space-y-3 text-xs">
+          <div><div class="flex justify-between text-slate-600"><span>Sao kê ghi là tiền từ sàn</span><b class="tnum text-slate-900">480tr/tháng</b></div><div class="h-2.5 bg-rose-400 rounded-full mt-1 bar-grow" style="width:100%"></div></div>
+          <div><div class="flex justify-between text-slate-600"><span>Dữ liệu payout của sàn</span><b class="tnum text-slate-900">280tr/tháng</b></div><div class="h-2.5 bg-teal-500 rounded-full mt-1" style="width:58%"></div></div>
+        </div>` + rowTable([['Chênh lệch', '71%', 'text-rose-600'], ['Ngưỡng chuyển người', '15%'], ['Dòng bị Jev gắn cờ', '2 / 38']]) +
+          `<div class="text-[11px] text-slate-500 mt-3 bg-slate-50 rounded-lg p-2">Văn bản chỉ ghi “không khớp, cần xác minh”. Hệ thống không kết luận gian lận.</div>`;
+      } else if (ev.kind === 'monitor') {
+        html = `<div class="text-xs text-slate-500 mb-2">Payout thực nhận sau giải ngân (triệu)</div>${bars([70, 68, 42], { h: 70, labels: ['T1', 'T2', 'T3'], color: '#14b8a6' })}` +
+          rowTable([['Hoàn hàng', '5% → 14%', 'text-rose-600'], ['Trích tuần 3', '10,5 / 12tr', 'text-amber-700'], ['Trạng thái', 'Short_Paid']]);
+      }
+      $('ev-body').innerHTML = html;
+      EZX.icons();
+      if (flash) { const card = $('ev-card'); card.classList.remove('flash-hl'); void card.offsetWidth; card.classList.add('flash-hl'); }
+      document.querySelectorAll('.memo-row').forEach(r => r.classList.toggle('bg-teal-50/60', r.dataset.ev === code));
+    }
+
+    /* ---------- Timeline ---------- */
+
+    function eventsFor(c) {
+      const anchor = c.submittedAt ? c.submittedAt - 1000 : bootAt;
+      const gap = c.submittedAt ? 4000 : 37000;
+      const base = c.events.map(([actor, text], i) => ({ actor, text, t: anchor - (c.events.length - 1 - i) * gap }));
+      const shared = (EZX.get().log || []).filter(e => e.scope === c.key);
+      return [...base, ...shared, ...(decided[c.key]?.events || [])].sort((a, b) => a.t - b.t);
+    }
+
+    const ACTOR = {
+      'Seller': 'bg-brand-500', 'Thẩm định viên': 'bg-teal-600', 'LOS': 'bg-indigo-500', 'Monitor Agent': 'bg-amber-500',
+      'Guardrail': 'bg-violet-500', 'Vision + Jev': 'bg-violet-500'
+    };
+
+    function renderTimeline() {
+      const c = getCase(current);
+      const list = eventsFor(c);
+      $('timeline').innerHTML = list.map((e, i) => `
+        <li class="flex gap-2.5 ${i === list.length - 1 ? 'fade-up' : ''}">
+          <span class="mt-1 w-2 h-2 rounded-full shrink-0 ${ACTOR[e.actor] || 'bg-slate-300'}"></span>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between gap-2"><span class="font-medium text-slate-700">${e.actor}</span><span class="text-slate-400 tnum">${EZX.clock(e.t)}</span></div>
+            <div class="text-slate-500">${e.text}</div>
+            <div class="mono text-[9px] text-slate-300 mt-0.5">${EZX.hash(e.text + e.t)}</div>
+          </div>
+        </li>`).join('');
+      $('timeline').scrollTop = $('timeline').scrollHeight;
+    }
+
+    function addEvent(actor, text) {
+      const d = decided[current] = decided[current] || {};
+      d.events = [...(d.events || []), { actor, text, t: Date.now() }];
+      renderTimeline();
+    }
+
+    /* ---------- Case view ---------- */
+
+    function compareBar(c) {
+      if (!c.compare) return '';
+      const { req, amount, gap } = c.compare;
+      const w = v => (v / req * 100).toFixed(1) + '%';
+      return `
+        <div>
+          <div class="text-xs font-medium text-slate-500 mb-2">Số xin so với khoảng thiếu thật</div>
+          <div class="relative h-9 bg-slate-100 rounded-lg overflow-hidden">
+            <div class="absolute inset-y-0 left-0 bg-slate-200 flex items-center justify-end pr-2 text-[11px] text-slate-500 tnum" style="width:100%">Xin ${EZX.tr(req)}</div>
+            <div class="absolute inset-y-0 left-0 bg-brand-200/80 border-r-2 border-brand-500" style="width:${w(amount)}"></div>
+            <div class="absolute inset-y-0 left-0 bg-rose-400/80 flex items-center pl-2 text-[11px] text-white font-medium tnum" style="width:${w(gap)}">Thiếu ${EZX.tr(gap)}</div>
+          </div>
+          <div class="flex justify-between text-[11px] mt-1 text-slate-500"><span>Đệm 10% → đề xuất <b class="text-brand-700">${EZX.tr(amount)}</b></span><span>Tránh cho vay thừa <b class="text-slate-700">${EZX.tr(req - amount)}</b></span></div>
+        </div>`;
+    }
+
+    function renderVersions(c) {
+      if (!c.versions.length) return '';
+      return `
+        <div>
+          <div class="text-xs font-medium text-slate-500 mb-2">Phiên bản điều khoản <span class="text-slate-400 font-normal">· không ghi đè</span></div>
+          <div class="space-y-1.5">${c.versions.map(v => `
+            <div class="flex items-center justify-between rounded-lg px-3 py-2 text-sm ${v.active ? 'bg-teal-50 text-teal-900 border border-teal-200 fade-up' : 'bg-slate-50 text-slate-400'}">
+              <span class="tnum"><span class="mono text-xs mr-2 ${v.active ? 'text-teal-600' : ''}">v${v.v}</span><span class="${v.active ? '' : 'line-through'}">${v.terms}</span></span>
+              <span class="text-xs">${v.by}${v.active ? ' · hiệu lực' : ''}</span>
+            </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function render() {
+      const c = getCase(current);
+      renderQueue();
+      const rulePass = c.rules.filter(r => r[1] === 'pass').length;
+      $('case').innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-xs text-slate-400 mono">${c.id}</div>
+            <h1 class="text-xl font-semibold text-slate-900 mt-0.5">${c.title}</h1>
+            <div class="text-xs text-slate-500 mt-0.5">${c.meta}</div>
+          </div>
+          <div class="flex flex-col items-end gap-1.5">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${c.badge[1]}">${c.badge[0]}</span>
+            ${c.rules.length ? `<span class="text-[11px] text-slate-500 tnum">${rulePass}/${c.rules.length} rule pass</span>` : ''}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">${c.stats.map(([k, v]) => `
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-3"><div class="text-[11px] text-slate-500">${k}</div><div class="text-base font-semibold text-slate-900 mt-0.5 tnum">${v}</div></div>`).join('')}
+        </div>
+
+        ${compareBar(c)}
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-500">Tờ trình thẩm định (D09)</span>
+            <span class="text-[11px] text-slate-400">Bấm mã để xem số gốc</span>
+          </div>
+          <ul class="space-y-1 text-sm">${c.memo.map(([t, ev]) => `
+            <li data-ev="${ev}" class="memo-row flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
+              <span class="text-slate-700">${t}</span>
+              <button data-ev="${ev}" class="ev-chip shrink-0 text-[11px] font-mono bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white border border-teal-200 rounded-md px-2 py-0.5 cursor-pointer transition-colors">${ev}</button>
+            </li>`).join('')}
+          </ul>
+          <div class="mt-3 flex flex-wrap gap-2 text-[11px]">
+            <span class="flex items-center gap-1 bg-emerald-50 text-emerald-700 rounded-md px-2 py-1"><i data-lucide="check-check" class="w-3 h-3"></i>${c.memo.length}/${c.memo.length} câu có số khớp bằng chứng</span>
+            <span class="flex items-center gap-1 bg-violet-50 text-violet-700 rounded-md px-2 py-1"><i data-lucide="shield-check" class="w-3 h-3"></i>Jev: không có từ cấm, không PII</span>
+            <span class="flex items-center gap-1 bg-slate-100 text-slate-600 rounded-md px-2 py-1"><i data-lucide="scale" class="w-3 h-3"></i>Khớp Policy Engine</span>
+          </div>
+        </div>
+
+        ${c.mode === 'restructure' ? monitorPanel() : ''}
+        ${renderVersions(c)}
+        <div id="c-actions" class="pt-4 border-t border-slate-100"></div>`;
+
+      document.querySelectorAll('.ev-chip').forEach(b => b.onclick = () => showEvidence(b.dataset.ev));
+      document.querySelectorAll('.memo-row').forEach(r => r.onmouseenter = () => showEvidence(r.dataset.ev, false));
+      renderActions(c);
+      renderTimeline();
+      showEvidence(c.memo[0][1], false);
+      EZX.icons();
+    }
+
+    function monitorPanel() {
+      return `
+        <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-4">
+          <div class="flex items-center gap-1.5 text-xs font-medium text-amber-800 mb-3"><i data-lucide="radar" class="w-3.5 h-3.5"></i>Monitor Agent · chạy lại khi có sự kiện, không tự thực thi</div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-white rounded-lg p-3 border border-amber-100">
+              <div class="text-slate-500">Lịch hiện tại</div>
+              <div class="font-semibold text-slate-900 mt-0.5 tnum">8 tuần × 12tr</div>
+              <div class="flex gap-0.5 mt-2">${Array.from({ length: 8 }, (_, i) => `<div class="flex-1 h-5 rounded-sm ${i === 2 ? 'bg-rose-400' : i < 2 ? 'bg-teal-500' : 'bg-slate-200'}"></div>`).join('')}</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-amber-100">
+              <div class="text-slate-500">Đề xuất</div>
+              <div class="font-semibold text-slate-900 mt-0.5 tnum">12 tuần × 8tr</div>
+              <div class="flex gap-0.5 mt-2">${Array.from({ length: 12 }, (_, i) => `<div class="flex-1 h-5 rounded-sm ${i < 2 ? 'bg-teal-500' : 'bg-amber-300'}"></div>`).join('')}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    /* ---------- Actions ---------- */
+
+    function setDone(html, tone) {
+      $('c-actions').innerHTML = `<div class="rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 fade-up ${tone}">${html}</div>`;
+      EZX.icons();
+    }
+
+    function renderActions(c) {
+      const el = $('c-actions');
+      const d = decided[c.key];
+
+      if (c.key === 'B') {
+        const s = EZX.get().seller;
+        if (s?.status === 'approved' || s?.status === 'disbursed' || d?.handshake) { renderHandshake(); return; }
+      }
+      if (d?.final) { setDone(d.final[0], d.final[1]); return; }
+
+      if (c.mode === 'readonly') {
+        el.innerHTML = `<div class="flex items-center gap-2 text-sm text-slate-500"><i data-lucide="archive" class="w-4 h-4"></i>Hồ sơ đã đóng tự động vì không có khoảng thiếu. Không tra CIC, tiết kiệm 1 lượt phí.</div>`;
+        EZX.icons();
+        return;
+      }
+
+      if (c.mode === 'restructure') {
+        el.innerHTML = `
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button id="a-ok" class="flex-1 flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-2.5 text-sm font-medium cursor-pointer transition-colors"><i data-lucide="calendar-clock" class="w-4 h-4"></i>Duyệt giãn hạn</button>
+            <button id="a-keep" class="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm cursor-pointer transition-colors">Giữ nguyên lịch</button>
+          </div>`;
+        $('a-ok').onclick = () => {
+          c.versions.forEach(v => v.active = false);
+          c.versions.push({ v: 2, by: 'Thẩm định viên', terms: '90tr · 12 tuần · 8tr/tuần', active: true });
+          addEvent('Thẩm định viên', 'Duyệt giãn hạn, tạo lịch v2 (giữ v1)');
+          addEvent('LOS', 'Phát hành phụ lục D23, chờ seller ký');
+          decided.L = { ...decided.L, final: ['<i data-lucide="check" class="w-4 h-4"></i>Đã duyệt. Lịch v2 có hiệu lực sau khi seller ký phụ lục D23.', 'bg-emerald-50 text-emerald-700'] };
+          render(); EZX.toast('Đã tạo lịch trả nợ v2', 'ok');
+        };
+        $('a-keep').onclick = () => {
+          addEvent('Thẩm định viên', 'Giữ nguyên lịch cũ');
+          decided.L = { ...decided.L, final: ['Giữ nguyên lịch trả nợ v1.', 'bg-slate-50 text-slate-600'] };
+          render();
+        };
+        EZX.icons();
+        return;
+      }
+
+      const esc = c.mode === 'escalated';
+      el.innerHTML = `
+        ${esc ? `<label class="block text-xs text-slate-500 mb-1.5" for="a-note">Ghi chú xác minh <span class="text-rose-600">*</span></label><textarea id="a-note" rows="2" placeholder="VD: Đã gọi seller, xác nhận 200tr là doanh thu bán sỉ ngoài sàn..." class="w-full mb-3 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100"></textarea>` : ''}
+        <div id="a-modify-box" class="hidden mb-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="flex items-end gap-2">
+            <label class="text-xs text-slate-500 flex-1">Số tiền (tr)<input id="a-amt" type="number" value="${c.amount || 80}" class="mt-1 w-full border border-slate-200 rounded-md px-2 py-1.5 text-sm text-slate-800 tnum" /></label>
+            <label class="text-xs text-slate-500 flex-1">Số tuần<input id="a-ten" type="number" value="${c.term || 8}" class="mt-1 w-full border border-slate-200 rounded-md px-2 py-1.5 text-sm text-slate-800 tnum" /></label>
+            <button id="a-save" class="bg-slate-900 hover:bg-slate-800 text-white rounded-md px-3 py-1.5 text-sm cursor-pointer">Lưu bản mới</button>
+          </div>
+          <div id="a-check" class="text-[11px] mt-2 text-slate-500"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="a-ok" class="flex-1 flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-2.5 text-sm font-medium cursor-pointer transition-colors shadow-sm"><i data-lucide="fingerprint" class="w-4 h-4"></i>${esc ? 'Duyệt ngoại lệ' : 'Duyệt & ký số'}</button>
+          <button id="a-mod" class="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm cursor-pointer transition-colors flex items-center justify-center gap-1.5"><i data-lucide="pencil" class="w-4 h-4"></i>Sửa số</button>
+          <button id="a-no" class="px-4 py-2.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-sm cursor-pointer transition-colors">Từ chối</button>
+        </div>
+        <div id="a-err" class="text-xs text-rose-600 mt-2" role="alert"></div>
+        ${!esc ? `<div class="text-[11px] text-slate-400 mt-2">Fast-track: hồ sơ đạt mọi rule, chỉ cần một người có thẩm quyền ký.</div>` : ''}`;
+
+      const needNote = () => {
+        const n = $('a-note');
+        if (n && !n.value.trim()) { $('a-err').textContent = 'Cần nhập ghi chú xác minh trước khi quyết định.'; n.focus(); return true; }
+        return false;
+      };
+
+      $('a-ok').onclick = () => { if (needNote()) return; openSign(c); };
+      $('a-mod').onclick = () => $('a-modify-box').classList.toggle('hidden');
+      const check = () => {
+        const amt = +$('a-amt').value, ten = +$('a-ten').value;
+        const total = Math.round(amt * (1 + 0.0083 * ten)), weekly = Math.ceil(total / ten);
+        const ratio = weekly / 49;
+        $('a-check').innerHTML = `Trừ <b class="tnum">${weekly}tr/tuần</b> = <b class="tnum ${ratio > 0.25 ? 'text-rose-600' : 'text-emerald-700'}">${EZX.pct(ratio)}</b> payout xấu · R04 ${ratio > 0.25 ? '<span class="text-rose-600 font-medium">fail</span>' : '<span class="text-emerald-700 font-medium">pass</span>'}${c.compare && amt > c.compare.gap * 1.15 ? ' · R01 <span class="text-rose-600 font-medium">fail</span>' : ''}`;
+        return { amt, ten, total, weekly, ratio };
+      };
+      $('a-amt').oninput = check; $('a-ten').oninput = check; check();
+      $('a-save').onclick = () => {
+        const { amt, ten, total, weekly, ratio } = check();
+        c.versions.forEach(v => v.active = false);
+        c.versions.push({ v: c.versions.length + 1, by: 'Thẩm định viên', terms: `${amt}tr · ${ten} tuần · ${weekly}tr/tuần`, active: true });
+        if (c.key === 'B') decided.B = { ...decided.B, versions: c.versions, amount: amt, term: ten, weekly, total, stats: [c.stats[0], ['Đề xuất', `${amt}tr · ${ten} tuần`], c.stats[2], ['Trừ / payout xấu', EZX.pct(ratio)]] };
+        addEvent('Thẩm định viên', `Sửa số, tạo v${c.versions.length} (giữ bản gốc)`);
+        render();
+      };
+      $('a-no').onclick = () => {
+        if (needNote()) return;
+        addEvent('Thẩm định viên', 'Từ chối hồ sơ');
+        decided[c.key] = { ...decided[c.key], final: ['Đã từ chối. Lý do gửi seller bằng tiếng thường, không nêu “gian lận”.', 'bg-rose-50 text-rose-700'] };
+        render();
+      };
+      EZX.icons();
+    }
+
+    /* ---------- Sign + handshake ---------- */
+
+    let signCase = null;
+    function openSign(c) {
+      signCase = c;
+      $('sign-summary').innerHTML = [
+        ['Hồ sơ', c.id], ['Khách hàng', c.title],
+        ['Số tiền', c.amount ? EZX.tr(c.amount) : 'Theo ghi chú'], ['Kỳ hạn', c.term ? c.term + ' tuần' : '—'],
+        ['Người ký', 'Nguyễn Thu Hà · VCB-TD-0231']
+      ].map(([a, b]) => `<div class="flex justify-between"><span class="text-slate-500">${a}</span><span class="font-medium text-slate-900 tnum">${b}</span></div>`).join('');
+      $('sign-modal').classList.remove('hidden');
+      $('hold').focus();
+      EZX.icons();
+    }
+    const closeSign = () => { $('sign-modal').classList.add('hidden'); cancelHold(); };
+    $('sign-close').onclick = closeSign;
+
+    let holdT = null, holdDone = null, holdStart = 0;
+    function startHold() {
+      if (holdDone) return;
+      holdStart = performance.now();
+      const dur = EZX.reduced ? 50 : 1000;
+      const tick = now => {
+        $('hold-fill').style.width = Math.min(100, (now - holdStart) / dur * 100) + '%';
+        holdT = requestAnimationFrame(tick);
+      };
+      holdT = requestAnimationFrame(tick);
+      holdDone = setTimeout(() => { cancelHold(); signed(); }, dur);
+    }
+    function cancelHold() {
+      cancelAnimationFrame(holdT);
+      clearTimeout(holdDone);
+      holdT = holdDone = null;
+      $('hold-fill').style.width = '0%';
+    }
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => $('hold').addEventListener(ev, startHold, { passive: true }));
+    ['pointerup', 'pointerleave', 'mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => $('hold').addEventListener(ev, cancelHold));
+    $('hold').addEventListener('keydown', e => { if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); startHold(); } });
+    $('hold').addEventListener('keyup', e => { if (e.code === 'Space' || e.key === 'Enter') cancelHold(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSign(); });
+
+    function signed() {
+      const c = signCase;
+      $('sign-modal').classList.add('hidden');
+      $('hold-fill').style.width = '0%';
+      addEvent('Thẩm định viên', `Ký số phê duyệt ${c.amount ? EZX.tr(c.amount) + ' · ' + c.term + ' tuần' : 'ngoại lệ'}`);
+      if (c.key === 'B') {
+        decided.B = { ...decided.B, handshake: true, final: true, lines: [] };
+        renderQueue();
+        runHandshake(c);
+      } else {
+        decided[c.key] = { ...decided[c.key], final: ['<i data-lucide="check" class="w-4 h-4"></i>Đã duyệt ngoại lệ, ghi chú xác minh lưu vào hồ sơ. Gửi LOS.', 'bg-emerald-50 text-emerald-700'] };
+        render();
+      }
+      EZX.toast('Đã ký số quyết định', 'ok');
+    }
+
+    const H_PRE = c => [
+      ['out', 'POST', '/los/v1/applications', `{ case_id: "${c.id}", amount: ${c.amount * 1e6}, term_weeks: ${c.term}, weekly_deduction: ${c.weekly * 1e6}, evidence_root: "${EZX.hash(c.id)}", signer: "VCB-TD-0231" }`],
+      ['in', '201', 'Created', 'los_ref = VCB-LOS-88912 · 142ms'],
+      ['in', 'hook', 'contract.generated', 'template = VCB-HD-MAU-07 · OTP gửi seller']
+    ];
+    const H_POST = c => [
+      ['in', 'hook', 'contract.signed', 'otp_verified = true'],
+      ['in', 'hook', 'disbursement.completed', `${(c.amount * 1e6).toLocaleString('vi-VN')}đ → Xưởng Minh Phát (STP)`],
+      ['in', 'hook', 'repayment_schedule.activated', `v${(c.versions || []).length || 1} · trần 25% payout`]
+    ];
+
+    function lineHtml([dir, a, b, c]) {
+      return `<div class="fade-up flex gap-2 py-0.5">
+        <span class="${dir === 'out' ? 'text-sky-400' : 'text-emerald-400'} shrink-0">${dir === 'out' ? '→' : '←'}</span>
+        <span class="${a === 'POST' ? 'text-sky-300' : a === 'hook' ? 'text-violet-300' : 'text-emerald-300'} shrink-0">${a}</span>
+        <span class="text-slate-200 shrink-0">${b}</span>
+        <span class="text-slate-500 break-all">${c}</span>
+      </div>`;
+    }
+
+    function renderHandshake() {
+      const c = getCase('B');
+      const s = EZX.get().seller;
+      const d = decided.B = decided.B || {};
+      if (!d.lines) d.lines = [...H_PRE(c), ...(s?.status === 'disbursed' ? H_POST(c) : [])];
+      const disbursed = s?.status === 'disbursed';
+      $('c-actions').innerHTML = `
+        <div class="rounded-xl bg-slate-950 text-xs mono p-4 overflow-hidden">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2 font-sans">
+            <span class="flex items-center gap-1.5"><i data-lucide="plug-zap" class="w-3.5 h-3.5 text-teal-400"></i>Instant LOS Handshake</span>
+            <span id="hs-state" class="${disbursed ? 'text-emerald-400' : 'text-amber-300'}">${disbursed ? 'Hoàn tất' : 'Chờ seller ký OTP'}</span>
+          </div>
+          <div id="hs-lines">${d.lines.map(lineHtml).join('')}</div>
+          ${disbursed ? '' : `<div class="flex items-center justify-between mt-2 pt-2 border-t border-white/10 font-sans"><span class="text-slate-500 flex items-center gap-1.5"><span class="typing text-slate-500"><span></span><span></span><span></span></span>đang chờ callback</span><button id="sim-otp" class="text-[11px] text-slate-400 hover:text-white cursor-pointer">Mô phỏng seller ký</button></div>`}
+        </div>
+        ${disbursed ? `<div class="mt-3 rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 bg-emerald-50 text-emerald-700 fade-up"><i data-lucide="check" class="w-4 h-4"></i>Đã giải ngân. Tổng thời gian từ lúc seller nhắn: ${s.elapsed || 'dưới 3 phút'}</div>` : ''}`;
+      const btn = $('sim-otp');
+      if (btn) btn.onclick = () => {
+        const st = EZX.get().seller || {};
+        EZX.set({ seller: { ...st, amount: c.amount, term: c.term, weekly: c.weekly, total: c.total, status: 'disbursed', elapsed: st.elapsed || '2 phút 48 giây' } });
+        EZX.log('LOS', `Giải ngân ${EZX.tr(c.amount)} cho xưởng Minh Phát`);
+        onSync(EZX.get());
+      };
+      EZX.icons();
+    }
+
+    async function runHandshake(c) {
+      const d = decided.B;
+      d.lines = [];
+      renderHandshake();
+      for (const l of H_PRE(c)) {
+        await EZX.sleep(550);
+        d.lines.push(l);
+        $('hs-lines')?.insertAdjacentHTML('beforeend', lineHtml(l));
+      }
+      const st = EZX.get().seller || {};
+      EZX.set({ seller: { ...st, amount: c.amount, term: c.term, weekly: c.weekly, total: c.total, status: 'approved', losRef: 'VCB-LOS-88912', approvedBy: 'Nguyễn Thu Hà' } });
+      addEvent('LOS', 'Nhận hồ sơ · VCB-LOS-88912');
+      $('k-done').textContent = '28';
+    }
+
+    let notifiedSubmit = EZX.get().seller?.submittedAt;
+    function onSync(s) {
+      if (!s.seller && decided.B) delete decided.B;
+      if (s.seller?.status === 'disbursed' && decided.B?.lines && !decided.B.post) {
+        decided.B.post = true;
+        decided.B.lines = [...decided.B.lines.slice(0, 3), ...H_POST(getCase('B'))];
+        if (current === 'B') { EZX.toast('Callback: đã giải ngân', 'ok'); }
+      }
+      if (s.seller?.status === 'submitted' && !decided.B?.handshake && notifiedSubmit !== s.seller.submittedAt) {
+        notifiedSubmit = s.seller.submittedAt;
+        EZX.toast('Hồ sơ mới: Gia Dụng Minh Anh (Fast-track)', 'dark');
+      }
+      render();
+    }
+    EZX.on(onSync);
+
+    render();
+  </script>
+</body>
+</html>
