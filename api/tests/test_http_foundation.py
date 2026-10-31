@@ -15,7 +15,7 @@ from api.security.auth import (
     Role,
     ScopedGrant,
 )
-from api.services.underwriting.sources import Scope
+from api.services.foundation.underwriting.sources import Scope
 
 
 def request(app, path, *, authorization=None, origin=None):

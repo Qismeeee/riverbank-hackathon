@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
-from api.services.underwriting.sources import Scope
+from api.services.foundation.underwriting.sources import Scope
 
 
 class InvalidAccessToken(Exception):

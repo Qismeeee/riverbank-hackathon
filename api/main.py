@@ -6,7 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import ApiSettings, settings_from_environment
-from api.routers import auth, cases, copilot, health, statements, studio, underwriting
+from api.routers import auth, cases, health, statements
+from api.routers.foundation import copilot, studio, underwriting
 from api.security.auth import AuthService
 from api.security.auth0 import Auth0AccessTokenVerifier
 from api.security.postgres_grants import PostgresGrantResolver

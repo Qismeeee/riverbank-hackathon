@@ -5,16 +5,16 @@ from uuid import uuid4
 
 import pytest
 
-from api.services.underwriting.demo_repository import DemoSourceRepository
-from api.services.underwriting.demo_sources import demo_payout_source
-from api.services.underwriting.evidence import Evidence
-from api.services.underwriting.models import Plan
-from api.services.underwriting.repository import (
+from api.services.foundation.underwriting.demo_repository import DemoSourceRepository
+from api.services.foundation.underwriting.demo_sources import demo_payout_source
+from api.services.foundation.underwriting.evidence import Evidence
+from api.services.foundation.underwriting.models import Plan
+from api.services.foundation.underwriting.repository import (
     CaseNotFound,
     IdempotencyKeyReused,
     MemoryCaseRepository,
 )
-from api.services.underwriting.sources import Consent, Scope, SourceAccessDenied
+from api.services.foundation.underwriting.sources import Consent, Scope, SourceAccessDenied
 
 SCOPE = Scope("demo-b", "demo-b")
 

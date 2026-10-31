@@ -10,7 +10,7 @@ from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from api.security.auth import AuthUnavailable, InvalidAccessToken, Principal, Role
-from api.services.underwriting.sources import Scope
+from api.services.foundation.underwriting.sources import Scope
 
 _bearer = HTTPBearer(auto_error=False)
 

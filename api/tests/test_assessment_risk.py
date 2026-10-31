@@ -3,11 +3,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from api.services.features import build_risk_features
-from api.services.risk import PDResult, RiskUnavailable, predict_pd
-from api.services.underwriting.assessment import assess_snapshot
-from api.services.underwriting.demo_sources import demo_payout_source
-from api.services.underwriting.sources import Scope, Snapshot, snapshot_hash
+from api.services.foundation.features import build_risk_features
+from api.services.foundation.risk import PDResult, RiskUnavailable, predict_pd
+from api.services.foundation.underwriting.assessment import assess_snapshot
+from api.services.foundation.underwriting.demo_sources import demo_payout_source
+from api.services.foundation.underwriting.sources import Scope, Snapshot, snapshot_hash
 from api.tests.test_cashflow import plan
 
 pytest_plugins = ("api.tests.test_cashflow",)

@@ -3,8 +3,8 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from api.services.underwriting.demo_sources import demo_payout_source
-from api.services.underwriting.sources import (
+from api.services.foundation.underwriting.demo_sources import demo_payout_source
+from api.services.foundation.underwriting.sources import (
     Consent,
     InMemoryAuthorization,
     Payout,

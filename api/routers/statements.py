@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 
 from api.security.auth import Principal
 from api.security.dependencies import require_seller_or_underwriter, require_underwriter
-from api.services.underwriting.availability import workflow_unavailable
+from api.services.foundation.underwriting.availability import workflow_unavailable
 
 router = APIRouter(tags=["statements"])
 

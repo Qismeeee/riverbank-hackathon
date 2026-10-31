@@ -10,7 +10,7 @@ from collections.abc import Callable
 import psycopg
 
 from api.security.auth import AuthUnavailable, Grants, Identity, Role, ScopedGrant
-from api.services.underwriting.sources import Scope
+from api.services.foundation.underwriting.sources import Scope
 
 _CURRENT_GRANTS = """
 SELECT r.role::text, s.seller_id::text, s.external_shop_ref

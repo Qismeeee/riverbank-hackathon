@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 
-from api.services.underwriting.models import Plan
+from api.services.foundation.underwriting.models import Plan
 
 
 class CreateCaseRequest(Plan):

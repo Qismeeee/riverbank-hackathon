@@ -10,8 +10,8 @@ from fastapi import HTTPException
 from api.security.auth import Grants, Identity, InvalidAccessToken, Principal, Role, ScopedGrant
 from api.security.auth0 import Auth0AccessTokenVerifier
 from api.security.dependencies import require_seller_ownership, require_underwriter
-from api.services.underwriting.cic import CICGate, CICRecord, CICUnavailable
-from api.services.underwriting.sources import Consent, InMemoryAuthorization, Scope
+from api.services.foundation.underwriting.cic import CICGate, CICRecord, CICUnavailable
+from api.services.foundation.underwriting.sources import Consent, InMemoryAuthorization, Scope
 
 SCOPE = Scope("seller", "shop")
 OTHER = Scope("seller", "other")

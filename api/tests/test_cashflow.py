@@ -4,7 +4,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from api.services.cashflow import CashFlowConfig, CashFlowPlan, SupplierPayment, calculate_cashflow
+from api.services.foundation.cashflow import (
+    CashFlowConfig,
+    CashFlowPlan,
+    SupplierPayment,
+    calculate_cashflow,
+)
 
 
 @pytest.fixture

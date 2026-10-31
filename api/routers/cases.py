@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Header
 from api.schemas.core import CreateCaseRequest
 from api.security.auth import Principal
 from api.security.dependencies import current_principal, require_seller, require_seller_ownership
-from api.services.underwriting.availability import workflow_unavailable
-from api.services.underwriting.sources import Scope
+from api.services.foundation.underwriting.availability import workflow_unavailable
+from api.services.foundation.underwriting.sources import Scope
 
 router = APIRouter(tags=["cases"])
 
